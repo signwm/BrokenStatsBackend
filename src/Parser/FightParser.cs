@@ -82,11 +82,11 @@ namespace BrokenStatsBackend.src.Parser
             string rares = ExtractRares(RemoveTags(raw.RawRaresAndSyngs));
             string syngs = ExtractSyngs(RemoveTags(raw.RawRaresAndSyngs));
 
-            fight.Drops.AddRange(ParseDrops(rares, "Rare", fight, repository));
-            fight.Drops.AddRange(ParseDrops(syngs, "Synergetic", fight, repository));
-            fight.Drops.AddRange(ParseDrops(RemoveTags(raw.RawItems), "Item", fight, repository));
-            fight.Drops.AddRange(ParseDrops(RemoveTags(raw.RawDrifs), "Drif", fight, repository));
-            fight.Drops.AddRange(ParseDrops(RemoveTags(raw.RawTrash), "Trash", fight, repository));
+            fight.Drops.AddRange(ParseDrops(rares, "RARE", fight, repository));
+            fight.Drops.AddRange(ParseDrops(syngs, "SYNERGETIC", fight, repository));
+            fight.Drops.AddRange(ParseDrops(RemoveTags(raw.RawItems), "ITEM", fight, repository));
+            fight.Drops.AddRange(ParseDrops(RemoveTags(raw.RawDrifs), "DRIF", fight, repository));
+            fight.Drops.AddRange(ParseDrops(RemoveTags(raw.RawTrash), "TRASH", fight, repository));
 
             return fight;
         }
