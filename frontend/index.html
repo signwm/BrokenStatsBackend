@@ -63,11 +63,16 @@ function formatDateTime(value){
     return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear().toString().slice(-2)}, ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
+function toInputValue(date){
+    const pad = n => n.toString().padStart(2,'0');
+    return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 function setDay(date){
     const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
     const end = new Date(start); end.setDate(end.getDate()+1);
-    document.getElementById('startDate').value = start.toISOString().slice(0,16);
-    document.getElementById('endDate').value = end.toISOString().slice(0,16);
+    document.getElementById('startDate').value = toInputValue(start);
+    document.getElementById('endDate').value = toInputValue(end);
     loadData();
 }
 
@@ -156,19 +161,31 @@ async function updateSummary(){
     });
     const summary = await res.json();
     const s = document.getElementById('summary');
-    const drops = summary.drops.map(d=>`<li>${d.name}: ${d.count}</li>`).join('');
+    const items = summary.items.map(d=>`<li>${d.name}: ${d.count}</li>`).join('');
+    const drifs = summary.drifs.map(d=>`<li>${d.name}: ${d.count}</li>`).join('');
+    const syner = summary.synergetics.map(d=>`<li>${d.name}: ${d.count}</li>`).join('');
+    const trash = summary.trash.map(d=>`<li>${d.name}: ${d.count}</li>`).join('');
+    const rare = summary.rare.map(d=>`<li>${d.name}: ${d.count}</li>`).join('');
     const values = Object.entries(summary.dropValuesPerType).map(([k,v])=>`<li>${k}: ${v}</li>`).join('');
     s.innerHTML = `
         <div class="row row-cols-2 row-cols-md-3 g-2 text-center">
             <div class="col border rounded p-2"><i class="bi bi-star-fill me-1"></i>${summary.totalExp}</div>
             <div class="col border rounded p-2"><i class="bi bi-coin me-1"></i>${summary.totalGold}</div>
-            <div class="col border rounded p-2"><i class="bi bi-emoji-smile me-1"></i>${summary.totalPsycho}</div>
+            <div class="col border rounded p-2"><i class="bi bi-emoji-dizzy me-1"></i>${summary.totalPsycho}</div>
             <div class="col border rounded p-2"><i class="bi bi-bar-chart me-1"></i>${summary.fightsCount}</div>
             <div class="col border rounded p-2"><i class="bi bi-clock me-1"></i>${formatDateTime(summary.sessionStart)}</div>
             <div class="col border rounded p-2"><i class="bi bi-clock-history me-1"></i>${formatDateTime(summary.sessionEnd)}</div>
         </div>
         <div class="row mt-2">
-            <div class="col border rounded p-2"><strong>Drops</strong><ul class="mb-0 list-unstyled">${drops}</ul></div>
+            <div class="col border rounded p-2"><strong>Items</strong><ul class="mb-0 list-unstyled">${items}</ul></div>
+            <div class="col border rounded p-2"><strong>Drifs</strong><ul class="mb-0 list-unstyled">${drifs}</ul></div>
+            <div class="col border rounded p-2">
+                <strong>Synergetics</strong><ul class="mb-0 list-unstyled">${syner}</ul>
+                <strong>Trash</strong><ul class="mb-0 list-unstyled">${trash}</ul>
+                <strong>Rare</strong><ul class="mb-0 list-unstyled">${rare}</ul>
+            </div>
+        </div>
+        <div class="row mt-2">
             <div class="col border rounded p-2"><strong>Drop values</strong><ul class="mb-0 list-unstyled">${values}</ul></div>
         </div>`;
 }
