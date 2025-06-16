@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Broken Stats</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
+        th, td { border: 1px solid #ccc; padding: 4px 8px; }
+        th { background-color: #f0f0f0; }
+        form > * { margin-right: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Broken Stats</h1>
+    <form id="queryForm">
+        <label>Start: <input type="date" id="startDate"></label>
+        <label>End: <input type="date" id="endDate"></label>
+        <label>Page: <input type="number" id="page" value="1" min="1"></label>
+        <label>Page Size: <input type="number" id="pageSize" value="50" min="1"></label>
+        <button type="submit">Load</button>
+    </form>
+    <section id="summary"></section>
+    <table id="fightsTable">
+        <thead>
+            <tr>
+                <th>Time</th>
+                <th>Exp</th>
+                <th>Gold</th>
+                <th>Psycho</th>
+                <th>Opponents</th>
+                <th>Drops</th>
+            </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
+<script>
+async function loadData(event) {
+    if(event) event.preventDefault();
+    const page = document.getElementById('page').value;
+    const pageSize = document.getElementById('pageSize').value;
+    const start = document.getElementById('startDate').value;
+    const end = document.getElementById('endDate').value;
+    const query = new URLSearchParams({ page, pageSize });
+    if(start) query.append('startDateTime', start);
+    if(end) query.append('endDateTime', end);
+    const fightsRes = await fetch('/api/fights/flat?' + query);
+    const fights = await fightsRes.json();
+    const summaryRes = await fetch(`/api/fights/summary?from=${start||''}&to=${end||''}`);
+    const summary = await summaryRes.json();
+    const tbody = document.querySelector('#fightsTable tbody');
+    tbody.innerHTML = '';
+    fights.forEach(f => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${f.time}</td><td>${f.exp}</td><td>${f.gold}</td><td>${f.psycho}</td><td>${f.opponents}</td><td>${f.drops}</td>`;
+        tbody.appendChild(tr);
+    });
+    const s = document.getElementById('summary');
+    s.innerHTML = `
+        <p>Total Exp: ${summary.totalExp}</p>
+        <p>Total Gold: ${summary.totalGold}</p>
+        <p>Total Psycho: ${summary.totalPsycho}</p>
+        <p>Fights Count: ${summary.fightsCount}</p>`;
+}
+document.getElementById('queryForm').addEventListener('submit', loadData);
+window.onload = loadData;
+</script>
+</body>
+</html>
