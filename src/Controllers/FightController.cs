@@ -96,7 +96,11 @@ public class FightsController(AppDbContext db) : ControllerBase
                 fightsCount = 0,
                 sessionStart = (DateTime?)null,
                 sessionEnd = (DateTime?)null,
-                drops = new List<object>(),
+                items = new List<object>(),
+                drifs = new List<object>(),
+                synergetics = new List<object>(),
+                trash = new List<object>(),
+                rare = new List<object>(),
                 dropValuesPerType = new Dictionary<string, int>()
             });
         }
@@ -110,14 +114,11 @@ public class FightsController(AppDbContext db) : ControllerBase
 
         var allDrops = fights.SelectMany(f => f.Drops).ToList();
 
-        var dropsSummary = allDrops
-            .GroupBy(d => d.DropItem.Name)
-            .Select(g => new
-            {
-                name = g.Key,
-                count = g.Sum(d => d.Quantity)
-            })
-            .ToList();
+        var items = GroupByName(allDrops.Where(d => d.DropItem.DropType.Type.ToLower() == "item"));
+        var drifs = GroupByName(allDrops.Where(d => d.DropItem.DropType.Type.ToLower() == "drif"));
+        var synergetics = GroupBySynergeticSuffix(allDrops.Where(d => d.DropItem.DropType.Type.ToLower() == "synergetic"));
+        var trash = GroupByQuality(allDrops.Where(d => d.DropItem.DropType.Type.ToLower() == "trash"));
+        var rare = GroupByName(allDrops.Where(d => d.DropItem.DropType.Type.ToLower() == "rare"));
 
         var dropValuesPerType = allDrops
             .GroupBy(d => d.DropItem.DropType.Type)
@@ -134,7 +135,11 @@ public class FightsController(AppDbContext db) : ControllerBase
             fightsCount,
             sessionStart,
             sessionEnd,
-            drops = dropsSummary,
+            items,
+            drifs,
+            synergetics,
+            trash,
+            rare,
             dropValuesPerType
         });
     }
@@ -159,7 +164,11 @@ public class FightsController(AppDbContext db) : ControllerBase
                 fightsCount = 0,
                 sessionStart = (DateTime?)null,
                 sessionEnd = (DateTime?)null,
-                drops = new List<object>(),
+                items = new List<object>(),
+                drifs = new List<object>(),
+                synergetics = new List<object>(),
+                trash = new List<object>(),
+                rare = new List<object>(),
                 dropValuesPerType = new Dictionary<string, int>()
             });
         }
@@ -173,14 +182,11 @@ public class FightsController(AppDbContext db) : ControllerBase
 
         var allDrops = fights.SelectMany(f => f.Drops).ToList();
 
-        var dropsSummary = allDrops
-            .GroupBy(d => d.DropItem.Name)
-            .Select(g => new
-            {
-                name = g.Key,
-                count = g.Sum(d => d.Quantity)
-            })
-            .ToList();
+        var items = GroupByName(allDrops.Where(d => d.DropItem.DropType.Type.ToLower() == "item"));
+        var drifs = GroupByName(allDrops.Where(d => d.DropItem.DropType.Type.ToLower() == "drif"));
+        var synergetics = GroupBySynergeticSuffix(allDrops.Where(d => d.DropItem.DropType.Type.ToLower() == "synergetic"));
+        var trash = GroupByQuality(allDrops.Where(d => d.DropItem.DropType.Type.ToLower() == "trash"));
+        var rare = GroupByName(allDrops.Where(d => d.DropItem.DropType.Type.ToLower() == "rare"));
 
         var dropValuesPerType = allDrops
             .GroupBy(d => d.DropItem.DropType.Type)
@@ -197,7 +203,11 @@ public class FightsController(AppDbContext db) : ControllerBase
             fightsCount,
             sessionStart,
             sessionEnd,
-            drops = dropsSummary,
+            items,
+            drifs,
+            synergetics,
+            trash,
+            rare,
             dropValuesPerType
         });
     }
@@ -228,6 +238,27 @@ public class FightsController(AppDbContext db) : ControllerBase
             return price;
         return Config.TrashDefaultPrice;
     }
+
+    private static List<object> GroupByName(IEnumerable<DropEntity> drops) =>
+        drops
+            .GroupBy(d => d.DropItem.Name)
+            .OrderByDescending(g => g.Sum(d => d.Quantity))
+            .Select(g => (object)new { name = g.Key, count = g.Sum(d => d.Quantity) })
+            .ToList();
+
+    private static List<object> GroupByQuality(IEnumerable<DropEntity> drops) =>
+        drops
+            .GroupBy(d => d.DropItem.Quality ?? "?")
+            .OrderByDescending(g => g.Sum(d => d.Quantity))
+            .Select(g => (object)new { name = g.Key, count = g.Sum(d => d.Quantity) })
+            .ToList();
+
+    private static List<object> GroupBySynergeticSuffix(IEnumerable<DropEntity> drops) =>
+        drops
+            .GroupBy(d => d.DropItem.Name.Split(' ').Last())
+            .OrderByDescending(g => g.Sum(d => d.Quantity))
+            .Select(g => (object)new { name = g.Key, count = g.Sum(d => d.Quantity) })
+            .ToList();
 
 
 
