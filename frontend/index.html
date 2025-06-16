@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <title>Broken Stats</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     <style>
         body { padding: 20px; }
     </style>
@@ -25,7 +26,13 @@
                 <input type="text" id="search" class="form-control" placeholder="keyword">
             </div>
             <div class="col-auto">
+                <button type="button" id="prevDay" class="btn btn-secondary">Dzień wcześniej</button>
+            </div>
+            <div class="col-auto">
                 <button type="button" id="today" class="btn btn-secondary">Dzisiaj</button>
+            </div>
+            <div class="col-auto">
+                <button type="button" id="nextDay" class="btn btn-secondary">Dzień później</button>
             </div>
             <div class="col-auto">
                 <button type="submit" class="btn btn-primary">Load</button>
@@ -36,7 +43,7 @@
     <table id="fightsTable" class="table table-dark table-striped">
         <thead>
             <tr>
-                <th scope="col"></th>
+                <th scope="col"><input type="checkbox" id="selectAll"></th>
                 <th scope="col">Time</th>
                 <th scope="col">Exp</th>
                 <th scope="col">Gold</th>
@@ -50,19 +57,45 @@
 <script>
 const selectedIds = new Set();
 
-function setToday() {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+function formatDateTime(value){
+    const d = new Date(value);
+    const pad = n => n.toString().padStart(2,'0');
+    return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear().toString().slice(-2)}, ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+function setDay(date){
+    const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const end = new Date(start); end.setDate(end.getDate()+1);
     document.getElementById('startDate').value = start.toISOString().slice(0,16);
-    document.getElementById('endDate').value = now.toISOString().slice(0,16);
+    document.getElementById('endDate').value = end.toISOString().slice(0,16);
     loadData();
 }
 
+function setToday() {
+    setDay(new Date());
+}
+
 document.getElementById('today').addEventListener('click', setToday);
+document.getElementById('prevDay').addEventListener('click', ()=> shiftDay(-1));
+document.getElementById('nextDay').addEventListener('click', ()=> shiftDay(1));
+
+function shiftDay(offset){
+    const current = new Date(document.getElementById('startDate').value || new Date());
+    current.setDate(current.getDate()+offset);
+    setDay(current);
+}
 
 document.getElementById('queryForm').addEventListener('submit', (e)=>{e.preventDefault();loadData();});
+document.getElementById('selectAll').addEventListener('change', e => {
+    document.querySelectorAll('#fightsTable tbody input[type="checkbox"]').forEach(cb => {
+        cb.checked = e.target.checked;
+        const id = cb.getAttribute('data-id');
+        if(cb.checked) selectedIds.add(id); else selectedIds.delete(id);
+    });
+    updateSummary();
+});
 
-window.onload = loadData;
+window.onload = setToday;
 
 async function loadData() {
     const start = document.getElementById('startDate').value;
@@ -84,7 +117,7 @@ function renderTable(fights){
         const checked = selectedIds.has(f.id) ? 'checked' : '';
         tr.innerHTML = `
             <td><input type="checkbox" data-id="${f.id}" ${checked}></td>
-            <td>${f.time}</td>
+            <td>${formatDateTime(f.time)}</td>
             <td>${f.exp}</td>
             <td>${f.gold}</td>
             <td>${f.psycho}</td>
@@ -97,9 +130,18 @@ function renderTable(fights){
             const id = e.target.getAttribute('data-id');
             if(e.target.checked) selectedIds.add(id); else selectedIds.delete(id);
             updateSummary();
+            updateSelectAllState();
         });
     });
     updateSummary();
+    updateSelectAllState();
+}
+
+function updateSelectAllState(){
+    const all = document.querySelectorAll('#fightsTable tbody input[type="checkbox"]');
+    const header = document.getElementById('selectAll');
+    if(!header) return;
+    header.checked = all.length > 0 && Array.from(all).every(cb => cb.checked);
 }
 
 async function updateSummary(){
@@ -117,14 +159,18 @@ async function updateSummary(){
     const drops = summary.drops.map(d=>`<li>${d.name}: ${d.count}</li>`).join('');
     const values = Object.entries(summary.dropValuesPerType).map(([k,v])=>`<li>${k}: ${v}</li>`).join('');
     s.innerHTML = `
-        <p>Total Exp: ${summary.totalExp}</p>
-        <p>Total Gold: ${summary.totalGold}</p>
-        <p>Total Psycho: ${summary.totalPsycho}</p>
-        <p>Fights Count: ${summary.fightsCount}</p>
-        <p>Session Start: ${summary.sessionStart}</p>
-        <p>Session End: ${summary.sessionEnd}</p>
-        <div><strong>Drops:</strong><ul>${drops}</ul></div>
-        <div><strong>Drop values:</strong><ul>${values}</ul></div>`;
+        <div class="row row-cols-2 row-cols-md-3 g-2 text-center">
+            <div class="col border rounded p-2"><i class="bi bi-star-fill me-1"></i>${summary.totalExp}</div>
+            <div class="col border rounded p-2"><i class="bi bi-coin me-1"></i>${summary.totalGold}</div>
+            <div class="col border rounded p-2"><i class="bi bi-emoji-smile me-1"></i>${summary.totalPsycho}</div>
+            <div class="col border rounded p-2"><i class="bi bi-bar-chart me-1"></i>${summary.fightsCount}</div>
+            <div class="col border rounded p-2"><i class="bi bi-clock me-1"></i>${formatDateTime(summary.sessionStart)}</div>
+            <div class="col border rounded p-2"><i class="bi bi-clock-history me-1"></i>${formatDateTime(summary.sessionEnd)}</div>
+        </div>
+        <div class="row mt-2">
+            <div class="col border rounded p-2"><strong>Drops</strong><ul class="mb-0 list-unstyled">${drops}</ul></div>
+            <div class="col border rounded p-2"><strong>Drop values</strong><ul class="mb-0 list-unstyled">${values}</ul></div>
+        </div>`;
 }
 </script>
 </body>
