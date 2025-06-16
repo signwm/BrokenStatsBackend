@@ -23,7 +23,7 @@ public class PricesParser
 
                     if (int.TryParse(parts[2], out int price))
                     {
-                        UpsertDropItemPrice(db, name, price, dropTypeId: 4); // 🟢 ITEM
+                        UpsertDropItemPrice(db, name, price, dropTypeId: 2); // 🟢 ITEM
                         seen.Add(name);
                     }
                 }
