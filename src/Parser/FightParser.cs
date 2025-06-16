@@ -60,7 +60,7 @@ namespace BrokenStatsBackend.src.Parser
             return result;
         }
 
-        public static FightEntity ToFightEntity(RawFightData raw, FightRepository repository)
+        public static FightEntity ToFightEntity(RawFightData raw)
         {
             var fight = new FightEntity
             {
@@ -75,23 +75,27 @@ namespace BrokenStatsBackend.src.Parser
 
             foreach (var (name, level) in raw.Opponents)
             {
-                var opponentType = repository.GetOrCreateOpponentType(name, level);
+                var opponentType = new OpponentTypeEntity
+                {
+                    Name = name,
+                    Level = level
+                };
                 fight.Opponents.Add(new OpponentEntity { OpponentType = opponentType });
             }
 
             string rares = ExtractRares(RemoveTags(raw.RawRaresAndSyngs));
             string syngs = ExtractSyngs(RemoveTags(raw.RawRaresAndSyngs));
 
-            fight.Drops.AddRange(ParseDrops(rares, "RARE", fight, repository));
-            fight.Drops.AddRange(ParseDrops(syngs, "SYNERGETIC", fight, repository));
-            fight.Drops.AddRange(ParseDrops(RemoveTags(raw.RawItems), "ITEM", fight, repository));
-            fight.Drops.AddRange(ParseDrops(RemoveTags(raw.RawDrifs), "DRIF", fight, repository));
-            fight.Drops.AddRange(ParseDrops(RemoveTags(raw.RawTrash), "TRASH", fight, repository));
+            fight.Drops.AddRange(ParseDrops(rares, "RARE", fight));
+            fight.Drops.AddRange(ParseDrops(syngs, "SYNERGETIC", fight));
+            fight.Drops.AddRange(ParseDrops(RemoveTags(raw.RawItems), "ITEM", fight));
+            fight.Drops.AddRange(ParseDrops(RemoveTags(raw.RawDrifs), "DRIF", fight));
+            fight.Drops.AddRange(ParseDrops(RemoveTags(raw.RawTrash), "TRASH", fight));
 
             return fight;
         }
 
-        private static List<DropEntity> ParseDrops(string raw, string dropTypeStr, FightEntity fight, FightRepository repository)
+        private static List<DropEntity> ParseDrops(string raw, string dropTypeStr, FightEntity fight)
         {
             if (string.IsNullOrWhiteSpace(raw)) return [];
 
@@ -120,7 +124,12 @@ namespace BrokenStatsBackend.src.Parser
                     text = text[..text.LastIndexOf('[')].Trim();
                 }
 
-                var dropItem = repository.GetOrCreateDropItem(text, quality, dropTypeStr);
+                var dropItem = new DropItemEntity
+                {
+                    Name = text,
+                    Quality = quality,
+                    DropType = new DropTypeEntity { Type = dropTypeStr }
+                };
 
                 result.Add(new DropEntity
                 {
