@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using System.Text;
 using BrokenStatsBackend.src.Models;
 using BrokenStatsBackend.src.Repositories;
 
@@ -94,13 +95,7 @@ namespace BrokenStatsBackend.src.Parser
         {
             if (string.IsNullOrWhiteSpace(raw)) return [];
 
-
-            var items = raw
-                .Trim()
-                .Split(new[] { "  ", "\t", "\n" }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(s => s.Trim())
-                .Where(s => !string.IsNullOrWhiteSpace(s))
-                .ToList();
+            var items = SplitRawItems(raw);
 
 
             var result = new List<DropEntity>();
@@ -133,6 +128,62 @@ namespace BrokenStatsBackend.src.Parser
                     DropItem = dropItem,
                     Quantity = quantity
                 });
+            }
+
+            return result;
+        }
+
+        private static List<string> SplitRawItems(string raw)
+        {
+            var result = new List<string>();
+            var sb = new StringBuilder();
+
+            string trimmed = raw.Trim();
+            for (int i = 0; i < trimmed.Length; i++)
+            {
+                char c = trimmed[i];
+                sb.Append(c);
+
+                bool separator = false;
+
+                if (c == ')')
+                {
+                    separator = true;
+                }
+                else if (c == ']')
+                {
+                    int j = i + 1;
+                    while (j < trimmed.Length && trimmed[j] == ' ')
+                        j++;
+                    if (j == trimmed.Length || trimmed[j] != '(')
+                        separator = true;
+                }
+                else if (c == '\t' || c == '\n')
+                {
+                    separator = true;
+                }
+                else if (c == ' ' && i + 1 < trimmed.Length && trimmed[i + 1] == ' ')
+                {
+                    separator = true;
+                    i++; // skip second space
+                }
+
+                if (separator)
+                {
+                    var item = sb.ToString().Trim();
+                    if (!string.IsNullOrWhiteSpace(item))
+                        result.Add(item);
+                    sb.Clear();
+                    while (i + 1 < trimmed.Length && trimmed[i + 1] == ' ')
+                        i++;
+                }
+            }
+
+            if (sb.Length > 0)
+            {
+                var item = sb.ToString().Trim();
+                if (!string.IsNullOrWhiteSpace(item))
+                    result.Add(item);
             }
 
             return result;
