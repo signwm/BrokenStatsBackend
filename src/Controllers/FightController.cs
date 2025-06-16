@@ -2,6 +2,8 @@ using BrokenStatsBackend.src.Database;
 using BrokenStatsBackend.src.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using BrokenStatsBackend;
+using System.Linq;
 
 namespace BrokenStatsBackend.src.Controllers;
 
@@ -116,7 +118,7 @@ public class FightsController(AppDbContext db) : ControllerBase
             .GroupBy(d => d.DropItem.DropType.Type)
             .ToDictionary(
                 g => g.Key,
-                g => g.Sum(d => d.DropItem.Value.GetValueOrDefault() * d.Quantity)
+                g => g.Sum(GetDropValue)
             );
 
         return Ok(new
@@ -130,6 +132,33 @@ public class FightsController(AppDbContext db) : ControllerBase
             drops = dropsSummary,
             dropValuesPerType
         });
+    }
+
+
+    private static int GetDropValue(DropEntity drop)
+    {
+        string type = drop.DropItem.DropType.Type.ToLower();
+        return type switch
+        {
+            "synergetic" => GetSynergeticPrice(drop.DropItem.Name) * drop.Quantity,
+            "trash" => GetTrashPrice(drop.DropItem.Quality) * drop.Quantity,
+            _ => drop.DropItem.Value.GetValueOrDefault() * drop.Quantity
+        };
+    }
+
+    private static int GetSynergeticPrice(string name)
+    {
+        var lastWord = name.Split(' ').Last();
+        if (Config.SynergeticSuffixPrices.TryGetValue(lastWord, out var price))
+            return price;
+        return Config.SynergeticDefaultPrice;
+    }
+
+    private static int GetTrashPrice(string? quality)
+    {
+        if (quality != null && Config.TrashQualityPrices.TryGetValue(quality, out var price))
+            return price;
+        return Config.TrashDefaultPrice;
     }
 
 
