@@ -116,7 +116,7 @@ public class FightsController(AppDbContext db) : ControllerBase
             .GroupBy(d => d.DropItem.DropType.Type)
             .ToDictionary(
                 g => g.Key,
-                g => g.Sum(d => d.DropItem.Value * d.Quantity)
+                g => g.Sum(d => d.DropItem.Value.GetValueOrDefault() * d.Quantity)
             );
 
         return Ok(new
