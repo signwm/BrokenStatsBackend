@@ -4,6 +4,8 @@ using BrokenStatsBackend.src.Repositories;
 using BrokenStatsBackend.src.Parser;
 using Microsoft.EntityFrameworkCore;
 using BrokenStatsBackend.Network;
+using Microsoft.Extensions.FileProviders;
+using System.IO;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -24,6 +26,9 @@ builder.Services.AddCors(options =>
 var app = builder.Build();
 
 app.UseCors();
+var frontendPath = Path.Combine(builder.Environment.ContentRootPath, "frontend");
+app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = new PhysicalFileProvider(frontendPath) });
+app.UseStaticFiles(new StaticFileOptions { FileProvider = new PhysicalFileProvider(frontendPath) });
 app.MapControllers();
 
 // 🔥 Sniffer w tle
