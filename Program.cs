@@ -3,7 +3,7 @@ using BrokenStatsBackend.src.Database;
 using BrokenStatsBackend.src.Repositories;
 using BrokenStatsBackend.src.Parser;
 using Microsoft.EntityFrameworkCore;
-using BrokenStatsBackend.Network;
+using BrokenStatsBackend.src.Network;
 
 var builder = WebApplication.CreateBuilder(args);
 

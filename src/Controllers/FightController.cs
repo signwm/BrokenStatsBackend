@@ -2,8 +2,6 @@ using BrokenStatsBackend.src.Database;
 using BrokenStatsBackend.src.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using BrokenStatsBackend;
-using System.Linq;
 
 namespace BrokenStatsBackend.src.Controllers;
 

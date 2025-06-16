@@ -1,7 +1,7 @@
 using BrokenStatsBackend.Logging;
 using BrokenStatsBackend.Util;
 
-namespace BrokenStatsBackend.Network
+namespace BrokenStatsBackend.src.Network
 {
     public class PacketBuffer(string name, string startMarker, Action<DateTime, string, string> consumer)
     {

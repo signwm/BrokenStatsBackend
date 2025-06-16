@@ -1,4 +1,4 @@
-namespace BrokenStatsBackend.Network
+namespace BrokenStatsBackend.src.Network
 {
     public class PacketHandler
     {

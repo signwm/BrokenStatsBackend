@@ -2,7 +2,7 @@ using BrokenStatsBackend.Logging;
 using PacketDotNet;
 using SharpPcap;
 
-namespace BrokenStatsBackend.Network
+namespace BrokenStatsBackend.src.Network
 {
     public class PacketSniffer
     {
@@ -68,6 +68,8 @@ namespace BrokenStatsBackend.Network
                 {
                     DateTime timestamp = DateTime.Now;
                     packetHandler?.HandlePacket(timestamp, traceId, hex);
+                    //PayloadLogger.SavePayload(tcpPacket.PayloadData);
+
                 }
             }
 
