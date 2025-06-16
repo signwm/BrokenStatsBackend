@@ -2,6 +2,7 @@ namespace BrokenStatsBackend.src.Models
 {
     public class FightFlatDto
     {
+        public Guid Id { get; set; }
         public DateTime Time { get; set; }
         public int Exp { get; set; }
         public int Gold { get; set; }

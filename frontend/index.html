@@ -3,67 +3,129 @@
 <head>
     <meta charset="UTF-8">
     <title>Broken Stats</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-        th, td { border: 1px solid #ccc; padding: 4px 8px; }
-        th { background-color: #f0f0f0; }
-        form > * { margin-right: 10px; }
+        body { padding: 20px; }
     </style>
 </head>
-<body>
-    <h1>Broken Stats</h1>
-    <form id="queryForm">
-        <label>Start: <input type="date" id="startDate"></label>
-        <label>End: <input type="date" id="endDate"></label>
-        <label>Page: <input type="number" id="page" value="1" min="1"></label>
-        <label>Page Size: <input type="number" id="pageSize" value="50" min="1"></label>
-        <button type="submit">Load</button>
+<body class="bg-dark text-light">
+    <h1 class="mb-3">Broken Stats</h1>
+    <form id="queryForm" class="mb-3">
+        <div class="row g-2 align-items-end">
+            <div class="col-auto">
+                <label class="form-label">Start</label>
+                <input type="datetime-local" id="startDate" class="form-control">
+            </div>
+            <div class="col-auto">
+                <label class="form-label">End</label>
+                <input type="datetime-local" id="endDate" class="form-control">
+            </div>
+            <div class="col-auto">
+                <label class="form-label">Search</label>
+                <input type="text" id="search" class="form-control" placeholder="keyword">
+            </div>
+            <div class="col-auto">
+                <button type="button" id="today" class="btn btn-secondary">Dzisiaj</button>
+            </div>
+            <div class="col-auto">
+                <button type="submit" class="btn btn-primary">Load</button>
+            </div>
+        </div>
     </form>
-    <section id="summary"></section>
-    <table id="fightsTable">
+    <section id="summary" class="mb-3"></section>
+    <table id="fightsTable" class="table table-dark table-striped">
         <thead>
             <tr>
-                <th>Time</th>
-                <th>Exp</th>
-                <th>Gold</th>
-                <th>Psycho</th>
-                <th>Opponents</th>
-                <th>Drops</th>
+                <th scope="col"></th>
+                <th scope="col">Time</th>
+                <th scope="col">Exp</th>
+                <th scope="col">Gold</th>
+                <th scope="col">Psycho</th>
+                <th scope="col">Opponents</th>
+                <th scope="col">Drops</th>
             </tr>
         </thead>
         <tbody></tbody>
     </table>
 <script>
-async function loadData(event) {
-    if(event) event.preventDefault();
-    const page = document.getElementById('page').value;
-    const pageSize = document.getElementById('pageSize').value;
+const selectedIds = new Set();
+
+function setToday() {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    document.getElementById('startDate').value = start.toISOString().slice(0,16);
+    document.getElementById('endDate').value = now.toISOString().slice(0,16);
+    loadData();
+}
+
+document.getElementById('today').addEventListener('click', setToday);
+
+document.getElementById('queryForm').addEventListener('submit', (e)=>{e.preventDefault();loadData();});
+
+window.onload = loadData;
+
+async function loadData() {
     const start = document.getElementById('startDate').value;
     const end = document.getElementById('endDate').value;
-    const query = new URLSearchParams({ page, pageSize });
-    if(start) query.append('startDateTime', start);
-    if(end) query.append('endDateTime', end);
-    const fightsRes = await fetch('/api/fights/flat?' + query);
-    const fights = await fightsRes.json();
-    const summaryRes = await fetch(`/api/fights/summary?from=${start||''}&to=${end||''}`);
-    const summary = await summaryRes.json();
+    const search = document.getElementById('search').value;
+    const params = new URLSearchParams();
+    if(start) params.append('startDateTime', start);
+    if(end) params.append('endDateTime', end);
+    if(search) params.append('search', search);
+    const fights = await (await fetch('/api/fights/flat?' + params)).json();
+    renderTable(fights);
+}
+
+function renderTable(fights){
     const tbody = document.querySelector('#fightsTable tbody');
     tbody.innerHTML = '';
     fights.forEach(f => {
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${f.time}</td><td>${f.exp}</td><td>${f.gold}</td><td>${f.psycho}</td><td>${f.opponents}</td><td>${f.drops}</td>`;
+        const checked = selectedIds.has(f.id) ? 'checked' : '';
+        tr.innerHTML = `
+            <td><input type="checkbox" data-id="${f.id}" ${checked}></td>
+            <td>${f.time}</td>
+            <td>${f.exp}</td>
+            <td>${f.gold}</td>
+            <td>${f.psycho}</td>
+            <td>${f.opponents}</td>
+            <td>${f.drops}</td>`;
         tbody.appendChild(tr);
     });
+    tbody.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+        cb.addEventListener('change', e => {
+            const id = e.target.getAttribute('data-id');
+            if(e.target.checked) selectedIds.add(id); else selectedIds.delete(id);
+            updateSummary();
+        });
+    });
+    updateSummary();
+}
+
+async function updateSummary(){
+    if(selectedIds.size === 0){
+        document.getElementById('summary').innerHTML = '<em>No fights selected</em>';
+        return;
+    }
+    const res = await fetch('/api/fights/summary', {
+        method: 'POST',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify(Array.from(selectedIds))
+    });
+    const summary = await res.json();
     const s = document.getElementById('summary');
+    const drops = summary.drops.map(d=>`<li>${d.name}: ${d.count}</li>`).join('');
+    const values = Object.entries(summary.dropValuesPerType).map(([k,v])=>`<li>${k}: ${v}</li>`).join('');
     s.innerHTML = `
         <p>Total Exp: ${summary.totalExp}</p>
         <p>Total Gold: ${summary.totalGold}</p>
         <p>Total Psycho: ${summary.totalPsycho}</p>
-        <p>Fights Count: ${summary.fightsCount}</p>`;
+        <p>Fights Count: ${summary.fightsCount}</p>
+        <p>Session Start: ${summary.sessionStart}</p>
+        <p>Session End: ${summary.sessionEnd}</p>
+        <div><strong>Drops:</strong><ul>${drops}</ul></div>
+        <div><strong>Drop values:</strong><ul>${values}</ul></div>`;
 }
-document.getElementById('queryForm').addEventListener('submit', loadData);
-window.onload = loadData;
 </script>
 </body>
 </html>

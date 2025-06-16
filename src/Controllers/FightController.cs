@@ -15,14 +15,10 @@ public class FightsController(AppDbContext db) : ControllerBase
 
     [HttpGet("flat")]
     public async Task<ActionResult<IEnumerable<FightFlatDto>>> GetFlat(
-       int page = 1,
-       int pageSize = 50,
        DateTime? startDateTime = null,
-       DateTime? endDateTime = null)
+       DateTime? endDateTime = null,
+       string? search = null)
     {
-        if (page < 1 || pageSize < 1)
-            return BadRequest("Invalid page or pageSize");
-
         var query = _db.Fights
             .Include(f => f.Opponents).ThenInclude(o => o.OpponentType)
             .Include(f => f.Drops).ThenInclude(d => d.DropItem).ThenInclude(di => di.DropType)
@@ -38,13 +34,11 @@ public class FightsController(AppDbContext db) : ControllerBase
         // 📅 Sortowanie najnowsze pierwsze
         query = query.OrderByDescending(f => f.Time);
 
-        var fights = await query
-            .Skip((page - 1) * pageSize)
-            .Take(pageSize)
-            .ToListAsync();
+        var fights = await query.ToListAsync();
 
         var result = fights.Select(fight => new FightFlatDto
         {
+            Id = fight.PublicId,
             Time = fight.Time,
             Exp = fight.Exp,
             Gold = fight.Gold,
@@ -66,7 +60,20 @@ public class FightsController(AppDbContext db) : ControllerBase
                         return $"{d.DropItem.Name}{quality}{amount}";
                     })
             )
-        });
+        }).ToList();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.ToLower();
+            result = result.Where(r =>
+                r.Time.ToString().ToLower().Contains(s) ||
+                r.Exp.ToString().Contains(s) ||
+                r.Gold.ToString().Contains(s) ||
+                r.Psycho.ToString().Contains(s) ||
+                r.Opponents.ToLower().Contains(s) ||
+                r.Drops.ToLower().Contains(s)
+            ).ToList();
+        }
 
         return Ok(result);
     }
@@ -79,6 +86,69 @@ public class FightsController(AppDbContext db) : ControllerBase
                 .ThenInclude(d => d.DropItem)
                     .ThenInclude(di => di.DropType)
             .Where(f => f.Time >= from && f.Time <= to)
+            .ToListAsync();
+
+        if (fights.Count == 0)
+        {
+            return Ok(new
+            {
+                totalExp = 0,
+                totalGold = 0,
+                totalPsycho = 0,
+                fightsCount = 0,
+                sessionStart = (DateTime?)null,
+                sessionEnd = (DateTime?)null,
+                drops = new List<object>(),
+                dropValuesPerType = new Dictionary<string, int>()
+            });
+        }
+
+        var totalExp = fights.Sum(f => f.Exp);
+        var totalGold = fights.Sum(f => f.Gold);
+        var totalPsycho = fights.Sum(f => f.Psycho);
+        var sessionStart = fights.Min(f => f.Time);
+        var sessionEnd = fights.Max(f => f.Time);
+        var fightsCount = fights.Count;
+
+        var allDrops = fights.SelectMany(f => f.Drops).ToList();
+
+        var dropsSummary = allDrops
+            .GroupBy(d => d.DropItem.Name)
+            .Select(g => new
+            {
+                name = g.Key,
+                count = g.Sum(d => d.Quantity)
+            })
+            .ToList();
+
+        var dropValuesPerType = allDrops
+            .GroupBy(d => d.DropItem.DropType.Type)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Sum(GetDropValue)
+            );
+
+        return Ok(new
+        {
+            totalExp,
+            totalGold,
+            totalPsycho,
+            fightsCount,
+            sessionStart,
+            sessionEnd,
+            drops = dropsSummary,
+            dropValuesPerType
+        });
+    }
+
+    [HttpPost("summary")]
+    public async Task<IActionResult> GetSummaryByIds([FromBody] Guid[] ids)
+    {
+        var fights = await _db.Fights
+            .Include(f => f.Drops)
+                .ThenInclude(d => d.DropItem)
+                    .ThenInclude(di => di.DropType)
+            .Where(f => ids.Contains(f.PublicId))
             .ToListAsync();
 
         if (fights.Count == 0)
