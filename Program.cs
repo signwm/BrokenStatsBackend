@@ -41,7 +41,7 @@ Task task = Task.Run(() =>
             try
             {
                 var rawFightData = FightParser.ParseRawFight(timestamp, Config.PlayerName, content);
-                var fight = FightParser.ToFightEntity(rawFightData, repository);
+                var fight = FightParser.ToFightEntity(rawFightData);
                 _ = repository.AddFightAsync(fight);
             }
             catch (Exception ex)
