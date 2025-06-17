@@ -43,8 +43,13 @@ public class FightsController(AppDbContext db) : ControllerBase
             Psycho = fight.Psycho,
             Opponents = string.Join(", ",
                 fight.Opponents
-                    .Select(o => $"{o.OpponentType.Name}({o.OpponentType.Level})")
-                    .Distinct()
+                    .GroupBy(o => new { o.OpponentType.Name, o.OpponentType.Level })
+                    .Select(g =>
+                    {
+                        int qty = g.Sum(o => o.Quantity);
+                        var amount = qty > 1 ? $" ({qty})" : "";
+                        return $"{g.Key.Name}({g.Key.Level}){amount}";
+                    })
             ),
             Drops = string.Join(", ",
                 fight.Drops

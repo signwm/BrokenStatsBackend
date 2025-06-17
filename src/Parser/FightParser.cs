@@ -72,14 +72,19 @@ namespace BrokenStatsBackend.src.Parser
                 Drops = new List<DropEntity>()
             };
 
-            foreach (var (name, level) in raw.Opponents)
+            foreach (var group in raw.Opponents.GroupBy(o => o))
             {
+                var (name, level) = group.Key;
                 var opponentType = new OpponentTypeEntity
                 {
                     Name = name,
                     Level = level
                 };
-                fight.Opponents.Add(new OpponentEntity { OpponentType = opponentType });
+                fight.Opponents.Add(new OpponentEntity
+                {
+                    OpponentType = opponentType,
+                    Quantity = group.Count()
+                });
             }
 
             string rares = ExtractRares(RemoveTags(raw.RawRaresAndSyngs));

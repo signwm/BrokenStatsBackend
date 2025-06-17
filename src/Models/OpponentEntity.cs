@@ -8,5 +8,7 @@ namespace BrokenStatsBackend.src.Models
 
         public int OpponentTypeId { get; set; }
         public OpponentTypeEntity OpponentType { get; set; } = null!;
+
+        public int Quantity { get; set; } = 1;
     }
 }
