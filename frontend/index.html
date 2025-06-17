@@ -38,7 +38,7 @@
     </form>
     <section id="summary" class="mb-3"></section>
     <div class="fights-wrapper">
-        <table id="fightsTable" class="table table-dark">
+        <table id="fightsTable" class="custom-dark-table">
             <thead>
                 <tr>
                     <th scope="col"><input type="checkbox" id="selectAll"></th>
@@ -181,7 +181,11 @@ function updateSelectAllState(){
 
 async function updateSummary(){
     if(selectedIds.size === 0){
-        document.getElementById('summary').innerHTML = '<em>No fights selected</em>';
+        document.getElementById('summary').innerHTML = `
+        <div class="no-fights-card">
+            <p class="no-fights-text">Żadna walka nie została zaznaczona.</p>
+        </div>
+        `;
         return;
     }
     const res = await fetch('/api/fights/summary', {
