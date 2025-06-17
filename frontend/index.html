@@ -64,6 +64,15 @@ function formatNumber(value){
     return Number(value).toLocaleString();
 }
 
+function formatDuration(ms){
+    const totalSeconds = Math.floor(ms/1000);
+    const hours = Math.floor(totalSeconds/3600);
+    const minutes = Math.floor((totalSeconds%3600)/60);
+    const seconds = totalSeconds%60;
+    const pad = n => n.toString().padStart(2,'0');
+    return `${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
+}
+
 function toInputValue(date){
     const pad = n => n.toString().padStart(2,'0');
     return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
@@ -175,6 +184,7 @@ async function updateSummary(){
     const trashVal = formatNumber(dropValues['trash'] || 0);
     const rareVal = formatNumber(dropValues['rare'] || 0);
     const day = formatDateTime(summary.sessionStart).split(',')[0];
+    const duration = formatDuration(new Date(summary.sessionEnd) - new Date(summary.sessionStart));
     s.innerHTML = `
         <div class="summary-grid">
             <div class="summary-card">
@@ -194,12 +204,8 @@ async function updateSummary(){
                 <div class="summary-value">${formatNumber(summary.fightsCount)}</div>
             </div>
             <div class="summary-card">
-                <div class="summary-title">Start</div>
-                <div class="summary-value">${formatDateTime(summary.sessionStart)}</div>
-            </div>
-            <div class="summary-card">
-                <div class="summary-title">Koniec</div>
-                <div class="summary-value">${formatDateTime(summary.sessionEnd)}</div>
+                <div class="summary-title">Duration</div>
+                <div class="summary-value">${duration}</div>
             </div>
         </div>
         <div class="summary-group">
@@ -207,23 +213,23 @@ async function updateSummary(){
         </div>
         <div class="summary-grid">
             <div class="summary-card">
-                <div class="summary-title">Items <span class="badge bg-light text-dark ms-1">${itemsVal}</span></div>
+                <div class="summary-title">Items <span class="badge bg-light text-dark ms-1">${itemsVal}g</span></div>
                 <ul class="item-list">${items}</ul>
             </div>
             <div class="summary-card">
-                <div class="summary-title">Drifs <span class="badge bg-light text-dark ms-1">${drifVal}</span></div>
+                <div class="summary-title">Drifs <span class="badge bg-light text-dark ms-1">${drifVal}g</span></div>
                 <ul class="item-list">${drifs}</ul>
             </div>
             <div class="summary-card">
-                <div class="summary-title">Synergetics <span class="badge bg-light text-dark ms-1">${synerVal}</span></div>
+                <div class="summary-title">Synergetics <span class="badge bg-light text-dark ms-1">${synerVal}g</span></div>
                 <ul class="item-list">${syner}</ul>
             </div>
             <div class="summary-card">
-                <div class="summary-title">Trash <span class="badge bg-light text-dark ms-1">${trashVal}</span></div>
+                <div class="summary-title">Trash <span class="badge bg-light text-dark ms-1">${trashVal}g</span></div>
                 <ul class="item-list">${trash}</ul>
             </div>
             <div class="summary-card">
-                <div class="summary-title">Rare <span class="badge bg-light text-dark ms-1">${rareVal}</span></div>
+                <div class="summary-title">Rare <span class="badge bg-light text-dark ms-1">${rareVal}g</span></div>
                 <ul class="item-list">${rare}</ul>
             </div>
         </div>`;
