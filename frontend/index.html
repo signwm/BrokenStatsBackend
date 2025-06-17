@@ -1,26 +1,26 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="pl">
 <head>
     <meta charset="UTF-8">
-    <title>Broken Stats</title>
+    <title>Zepsute Statystyki</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body class="bg-dark text-light">
-    <h1 class="mb-3">Broken Stats</h1>
+    <h1 class="mb-3">Zepsute Statystyki</h1>
     <form id="queryForm" class="mb-3">
         <div class="row g-2 align-items-end">
             <div class="col-auto">
-                <label class="form-label">Start</label>
+                <label class="form-label">Początek</label>
                 <input type="datetime-local" id="startDate" class="form-control">
             </div>
             <div class="col-auto">
-                <label class="form-label">End</label>
+                <label class="form-label">Koniec</label>
                 <input type="datetime-local" id="endDate" class="form-control">
             </div>
             <div class="col-auto">
-                <label class="form-label">Search</label>
-                <input type="text" id="search" class="form-control" placeholder="keyword">
+                <label class="form-label">Szukaj</label>
+                <input type="text" id="search" class="form-control" placeholder="słowo kluczowe">
             </div>
             <div class="col-auto">
                 <button type="button" id="prevDay" class="btn btn-secondary">Dzień wcześniej</button>
@@ -32,7 +32,7 @@
                 <button type="button" id="nextDay" class="btn btn-secondary">Dzień później</button>
             </div>
             <div class="col-auto">
-                <button type="submit" class="btn btn-primary">Load</button>
+                <button type="submit" class="btn btn-primary">Wczytaj</button>
             </div>
         </div>
     </form>
@@ -42,12 +42,12 @@
             <thead>
                 <tr>
                     <th scope="col"><input type="checkbox" id="selectAll"></th>
-                    <th scope="col">Time</th>
+                    <th scope="col">Czas</th>
                     <th scope="col">Exp</th>
                     <th scope="col">Gold</th>
                     <th scope="col">Psycho</th>
-                    <th scope="col">Opponents</th>
-                    <th scope="col">Drops</th>
+                    <th scope="col">Przeciwnicy</th>
+                    <th scope="col">Łupy</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -228,7 +228,7 @@ async function updateSummary(){
                 <div class="summary-value">${formatNumber(summary.fightsCount)}</div>
             </div>
             <div class="summary-card">
-                <div class="summary-title">Duration</div>
+                <div class="summary-title">Czas trwania</div>
                 <div class="summary-value">${duration}</div>
             </div>
         </div>
@@ -237,23 +237,23 @@ async function updateSummary(){
         </div>
         <div class="summary-grid">
             <div class="summary-card">
-                <div class="summary-title">Items <span class="badge bg-light text-dark ms-1">${itemsVal}g</span></div>
+                <div class="summary-title">Użytkowe <span class="badge bg-light text-dark ms-1">${itemsVal}g</span></div>
                 <ul class="item-list">${items}</ul>
             </div>
             <div class="summary-card">
-                <div class="summary-title">Drifs <span class="badge bg-light text-dark ms-1">${drifVal}g</span></div>
+                <div class="summary-title">Drify <span class="badge bg-light text-dark ms-1">${drifVal}g</span></div>
                 <ul class="item-list">${drifs}</ul>
             </div>
             <div class="summary-card">
-                <div class="summary-title">Synergetics <span class="badge bg-light text-dark ms-1">${synerVal}g</span></div>
+                <div class="summary-title">Syngi <span class="badge bg-light text-dark ms-1">${synerVal}g</span></div>
                 <ul class="item-list">${syner}</ul>
             </div>
             <div class="summary-card">
-                <div class="summary-title">Trash <span class="badge bg-light text-dark ms-1">${trashVal}g</span></div>
+                <div class="summary-title">Śmieci <span class="badge bg-light text-dark ms-1">${trashVal}g</span></div>
                 <ul class="item-list">${trash}</ul>
             </div>
             <div class="summary-card">
-                <div class="summary-title">Rare <span class="badge bg-light text-dark ms-1">${rareVal}g</span></div>
+                <div class="summary-title">Rary <span class="badge bg-light text-dark ms-1">${rareVal}g</span></div>
                 <ul class="item-list">${rare}</ul>
             </div>
         </div>`;
