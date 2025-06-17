@@ -37,20 +37,22 @@
         </div>
     </form>
     <section id="summary" class="mb-3"></section>
-    <table id="fightsTable" class="table table-dark table-striped">
-        <thead>
-            <tr>
-                <th scope="col"><input type="checkbox" id="selectAll"></th>
-                <th scope="col">Time</th>
-                <th scope="col">Exp</th>
-                <th scope="col">Gold</th>
-                <th scope="col">Psycho</th>
-                <th scope="col">Opponents</th>
-                <th scope="col">Drops</th>
-            </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
+    <div class="fights-wrapper">
+        <table id="fightsTable" class="table table-dark">
+            <thead>
+                <tr>
+                    <th scope="col"><input type="checkbox" id="selectAll"></th>
+                    <th scope="col">Time</th>
+                    <th scope="col">Exp</th>
+                    <th scope="col">Gold</th>
+                    <th scope="col">Psycho</th>
+                    <th scope="col">Opponents</th>
+                    <th scope="col">Drops</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
 <script>
 const selectedIds = new Set();
 let lastClickedIndex = null;

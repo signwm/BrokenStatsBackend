@@ -55,3 +55,52 @@ body { padding: 20px; }
 .item-list li + li {
   margin-top: 4px;
 }
+
+/* Styling for the fights table */
+.fights-wrapper {
+  max-width: 1400px;
+  margin: 40px auto;
+  padding: 0 16px;
+}
+
+.table-dark {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #1e1e1e;
+  color: #ddd;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
+}
+
+.table-dark thead {
+  background-color: #2a2a2a;
+}
+
+.table-dark thead th {
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 12px;
+  border-bottom: 1px solid #444;
+}
+
+.table-dark tbody tr {
+  transition: background-color 0.2s;
+}
+
+.table-dark tbody tr:hover {
+  background-color: #2e2e2e;
+}
+
+.table-dark td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #333;
+  vertical-align: middle;
+}
+
+.table-dark input[type="checkbox"] {
+  transform: scale(1.2);
+  cursor: pointer;
+}
