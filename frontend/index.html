@@ -63,6 +63,10 @@ function formatDateTime(value){
     return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear().toString().slice(-2)}, ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
+function formatNumber(value){
+    return Number(value).toLocaleString();
+}
+
 function toInputValue(date){
     const pad = n => n.toString().padStart(2,'0');
     return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
@@ -166,27 +170,39 @@ async function updateSummary(){
     const syner = summary.synergetics.map(d=>`<li>${d.name}: ${d.count}</li>`).join('');
     const trash = summary.trash.map(d=>`<li>${d.name}: ${d.count}</li>`).join('');
     const rare = summary.rare.map(d=>`<li>${d.name}: ${d.count}</li>`).join('');
-    const values = Object.entries(summary.dropValuesPerType).map(([k,v])=>`<li>${k}: ${v}</li>`).join('');
+    const dropValues = {};
+    Object.entries(summary.dropValuesPerType).forEach(([k,v]) => dropValues[k.toLowerCase()] = v);
+    const itemsVal = formatNumber(dropValues['item'] || 0);
+    const drifVal = formatNumber(dropValues['drif'] || 0);
+    const synerVal = formatNumber(dropValues['synergetic'] || 0);
+    const trashVal = formatNumber(dropValues['trash'] || 0);
+    const rareVal = formatNumber(dropValues['rare'] || 0);
     s.innerHTML = `
         <div class="row row-cols-2 row-cols-md-3 g-2 text-center">
-            <div class="col border rounded p-2"><i class="bi bi-star-fill me-1"></i>${summary.totalExp}</div>
-            <div class="col border rounded p-2"><i class="bi bi-coin me-1"></i>${summary.totalGold}</div>
-            <div class="col border rounded p-2"><i class="bi bi-emoji-dizzy me-1"></i>${summary.totalPsycho}</div>
-            <div class="col border rounded p-2"><i class="bi bi-bar-chart me-1"></i>${summary.fightsCount}</div>
-            <div class="col border rounded p-2"><i class="bi bi-clock me-1"></i>${formatDateTime(summary.sessionStart)}</div>
-            <div class="col border rounded p-2"><i class="bi bi-clock-history me-1"></i>${formatDateTime(summary.sessionEnd)}</div>
+            <div class="col border rounded p-2 bg-secondary"><i class="bi bi-star-fill me-1"></i>${formatNumber(summary.totalExp)}</div>
+            <div class="col border rounded p-2 bg-warning text-dark"><i class="bi bi-coin me-1"></i>${formatNumber(summary.totalGold)}</div>
+            <div class="col border rounded p-2 bg-danger"><i class="bi bi-emoji-dizzy me-1"></i>${formatNumber(summary.totalPsycho)}</div>
+            <div class="col border rounded p-2 bg-primary"><i class="bi bi-bar-chart me-1"></i>${formatNumber(summary.fightsCount)}</div>
+            <div class="col border rounded p-2 bg-success"><i class="bi bi-clock me-1"></i>${formatDateTime(summary.sessionStart)}</div>
+            <div class="col border rounded p-2 bg-info text-dark"><i class="bi bi-clock-history me-1"></i>${formatDateTime(summary.sessionEnd)}</div>
         </div>
         <div class="row mt-2">
-            <div class="col border rounded p-2"><strong>Items</strong><ul class="mb-0 list-unstyled">${items}</ul></div>
-            <div class="col border rounded p-2"><strong>Drifs</strong><ul class="mb-0 list-unstyled">${drifs}</ul></div>
-            <div class="col border rounded p-2">
-                <strong>Synergetics</strong><ul class="mb-0 list-unstyled">${syner}</ul>
-                <strong>Trash</strong><ul class="mb-0 list-unstyled">${trash}</ul>
-                <strong>Rare</strong><ul class="mb-0 list-unstyled">${rare}</ul>
+            <div class="col border rounded p-2 bg-secondary">
+                <strong>Items <span class="badge bg-light text-dark ms-1">${itemsVal}</span></strong>
+                <ul class="mb-0 list-unstyled">${items}</ul>
             </div>
-        </div>
-        <div class="row mt-2">
-            <div class="col border rounded p-2"><strong>Drop values</strong><ul class="mb-0 list-unstyled">${values}</ul></div>
+            <div class="col border rounded p-2 bg-info text-dark">
+                <strong>Drifs <span class="badge bg-light text-dark ms-1">${drifVal}</span></strong>
+                <ul class="mb-0 list-unstyled">${drifs}</ul>
+            </div>
+            <div class="col border rounded p-2 bg-success text-dark">
+                <strong>Synergetics <span class="badge bg-light text-dark ms-1">${synerVal}</span></strong>
+                <ul class="mb-0 list-unstyled">${syner}</ul>
+                <strong>Trash <span class="badge bg-light text-dark ms-1">${trashVal}</span></strong>
+                <ul class="mb-0 list-unstyled">${trash}</ul>
+                <strong>Rare <span class="badge bg-light text-dark ms-1">${rareVal}</span></strong>
+                <ul class="mb-0 list-unstyled">${rare}</ul>
+            </div>
         </div>`;
 }
 </script>
