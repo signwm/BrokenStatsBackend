@@ -53,6 +53,7 @@
     </table>
 <script>
 const selectedIds = new Set();
+let lastClickedIndex = null;
 
 function formatDateTime(value){
     const d = new Date(value);
@@ -121,17 +122,19 @@ async function loadData() {
     if(end) params.append('endDateTime', end);
     if(search) params.append('search', search);
     const fights = await (await fetch('/api/fights/flat?' + params)).json();
+    const visible = new Set(fights.map(f => f.id.toString()));
+    Array.from(selectedIds).forEach(id => { if(!visible.has(id)) selectedIds.delete(id); });
     renderTable(fights);
 }
 
 function renderTable(fights){
     const tbody = document.querySelector('#fightsTable tbody');
     tbody.innerHTML = '';
-    fights.forEach(f => {
+    fights.forEach((f, i) => {
         const tr = document.createElement('tr');
-        const checked = selectedIds.has(f.id) ? 'checked' : '';
+        const checked = selectedIds.has(f.id.toString()) ? 'checked' : '';
         tr.innerHTML = `
-            <td><input type="checkbox" data-id="${f.id}" ${checked}></td>
+            <td><input type="checkbox" data-id="${f.id}" data-index="${i}" ${checked}></td>
             <td>${formatDateTime(f.time)}</td>
             <td>${f.exp}</td>
             <td>${f.gold}</td>
@@ -140,10 +143,25 @@ function renderTable(fights){
             <td>${f.drops}</td>`;
         tbody.appendChild(tr);
     });
-    tbody.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-        cb.addEventListener('change', e => {
-            const id = e.target.getAttribute('data-id');
-            if(e.target.checked) selectedIds.add(id); else selectedIds.delete(id);
+    const checkboxes = Array.from(tbody.querySelectorAll('input[type="checkbox"]'));
+    checkboxes.forEach((cb, index) => {
+        cb.dataset.index = index;
+        cb.addEventListener('click', e => {
+            const id = cb.getAttribute('data-id');
+            if(e.shiftKey && lastClickedIndex !== null){
+                const start = Math.min(lastClickedIndex, index);
+                const end = Math.max(lastClickedIndex, index);
+                const targetState = cb.checked;
+                for(let i=start; i<=end; i++){
+                    const other = checkboxes[i];
+                    other.checked = targetState;
+                    const otherId = other.getAttribute('data-id');
+                    if(targetState) selectedIds.add(otherId); else selectedIds.delete(otherId);
+                }
+            } else {
+                if(cb.checked) selectedIds.add(id); else selectedIds.delete(id);
+            }
+            lastClickedIndex = index;
             updateSummary();
             updateSelectAllState();
         });
