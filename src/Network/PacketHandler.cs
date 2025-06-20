@@ -1,3 +1,4 @@
+
 using System.Text;
 
 namespace BrokenStatsBackend.src.Network
@@ -8,6 +9,7 @@ namespace BrokenStatsBackend.src.Network
         {
             public readonly string Name = name;
             public readonly byte[] StartMarker = Encoding.ASCII.GetBytes(startMarker);
+
             public readonly Action<DateTime, string, string> Consumer = consumer;
         }
 
@@ -17,6 +19,7 @@ namespace BrokenStatsBackend.src.Network
         public void RegisterBuffer(string name, string startMarker, Action<DateTime, string, string> consumer)
         {
             definitions.Add(new MessageDefinition(name, startMarker, consumer));
+
         }
 
         public void HandlePacket(DateTime timestamp, string traceId, byte[] payload)

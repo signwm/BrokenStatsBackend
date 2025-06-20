@@ -59,6 +59,7 @@ Task task = Task.Run(() =>
         PricesParser.UpdateItemPrices(context, timestamp, traceId, content);
     });
     handler.RegisterBuffer("drif", "50;0;", (timestamp, traceId, content) =>
+
     {
         PricesParser.UpdateDrifPrices(context, timestamp, traceId, content);
     });
