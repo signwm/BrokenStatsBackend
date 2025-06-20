@@ -34,7 +34,8 @@ app.MapControllers();
 Task task = Task.Run(() =>
 {
     var context = app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
-    var repository = new FightRepository(context);
+    var fightRepository = new FightRepository(context);
+    var instanceRepository = new InstanceRepository(context);
     var handler = new PacketHandler();
 
     handler.RegisterBuffer(
@@ -46,7 +47,7 @@ Task task = Task.Run(() =>
             {
                 var rawFightData = FightParser.ParseRawFight(timestamp, Config.PlayerName, content);
                 var fight = FightParser.ToFightEntity(rawFightData);
-                _ = repository.AddFightAsync(fight);
+                _ = fightRepository.AddFightAsync(fight);
             }
             catch (Exception ex)
             {
@@ -62,6 +63,19 @@ Task task = Task.Run(() =>
 
     {
         PricesParser.UpdateDrifPrices(context, timestamp, traceId, content);
+    });
+
+    handler.RegisterBuffer("instance", "1;118;", (timestamp, traceId, content) =>
+    {
+        try
+        {
+            var instance = InstanceParser.ToInstanceEntity(timestamp, content);
+            _ = instanceRepository.AddInstanceAsync(instance);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine(ex);
+        }
     });
 
     var sniffer = new PacketSniffer();
