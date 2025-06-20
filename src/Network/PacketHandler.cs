@@ -36,7 +36,6 @@ namespace BrokenStatsBackend.src.Network
                 int endIndex = IndexOfByte(buffer, 0x00, 0);
                 if (endIndex < 0)
                 {
-                    TrimBuffer();
                     break;
                 }
 
@@ -67,15 +66,6 @@ namespace BrokenStatsBackend.src.Network
                     return i;
             }
             return -1;
-        }
-
-        private void TrimBuffer()
-        {
-            const int maxSize = 1024;
-            if (buffer.Count > maxSize)
-            {
-                buffer.RemoveRange(0, buffer.Count - maxSize);
-            }
         }
     }
 }
