@@ -8,6 +8,7 @@ namespace BrokenStatsBackend.src.Network
         private class MessageDefinition(string name, string startMarker, Action<DateTime, string, string> consumer)
         {
             public readonly string Name = name;
+            public readonly string StartMarkerString = startMarker;
             public readonly byte[] StartMarker = Encoding.ASCII.GetBytes(startMarker);
 
             public readonly Action<DateTime, string, string> Consumer = consumer;
@@ -30,72 +31,33 @@ namespace BrokenStatsBackend.src.Network
 
         private void ProcessBuffer(DateTime timestamp, string traceId)
         {
-            bool found;
-            do
+            while (true)
             {
-                found = false;
-                int earliestIndex = -1;
-                MessageDefinition? matched = null;
-
-                foreach (var def in definitions)
-                {
-                    int idx = IndexOfSequence(buffer, def.StartMarker);
-                    if (idx >= 0 && (earliestIndex == -1 || idx < earliestIndex))
-                    {
-                        earliestIndex = idx;
-                        matched = def;
-                    }
-                }
-
-                if (matched == null)
+                int endIndex = IndexOfByte(buffer, 0x00, 0);
+                if (endIndex < 0)
                 {
                     TrimBuffer();
                     break;
                 }
 
-                if (earliestIndex > 0)
-                {
-                    buffer.RemoveRange(0, earliestIndex);
-                }
-
-                int startContent = matched.StartMarker.Length;
-                int endIndex = IndexOfByte(buffer, 0x00, startContent);
-                if (endIndex < 0)
-                {
-                    break;
-                }
-
                 byte[] fullMessageBytes = buffer.GetRange(0, endIndex).ToArray();
-                byte[] messageBytes = buffer.GetRange(startContent, endIndex - startContent).ToArray();
                 buffer.RemoveRange(0, endIndex + 1);
 
                 string fullMessage = Encoding.UTF8.GetString(fullMessageBytes);
                 PayloadLogger.SavePayload(fullMessage);
 
-                string message = Encoding.UTF8.GetString(messageBytes);
-                matched.Consumer(timestamp, traceId, message);
-                found = true;
-            } while (found);
-        }
-
-        private static int IndexOfSequence(List<byte> buffer, byte[] sequence)
-        {
-            for (int i = 0; i <= buffer.Count - sequence.Length; i++)
-            {
-                bool match = true;
-                for (int j = 0; j < sequence.Length; j++)
+                foreach (var def in definitions)
                 {
-                    if (buffer[i + j] != sequence[j])
+                    if (fullMessage.StartsWith(def.StartMarkerString))
                     {
-                        match = false;
+                        string content = fullMessage[def.StartMarkerString.Length..];
+                        def.Consumer(timestamp, traceId, content);
                         break;
                     }
                 }
-                if (match)
-                    return i;
             }
-            return -1;
         }
+
 
         private static int IndexOfByte(List<byte> buffer, byte value, int startIndex)
         {
