@@ -65,11 +65,14 @@ namespace BrokenStatsBackend.src.Network
                     break;
                 }
 
+                byte[] fullMessageBytes = buffer.GetRange(0, endIndex).ToArray();
                 byte[] messageBytes = buffer.GetRange(startContent, endIndex - startContent).ToArray();
                 buffer.RemoveRange(0, endIndex + 1);
 
+                string fullMessage = Encoding.UTF8.GetString(fullMessageBytes);
+                PayloadLogger.SavePayload(fullMessage);
+
                 string message = Encoding.UTF8.GetString(messageBytes);
-                PayloadLogger.SavePayload(message);
                 matched.Consumer(timestamp, traceId, message);
                 found = true;
             } while (found);
