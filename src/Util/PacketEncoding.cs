@@ -21,5 +21,17 @@ namespace BrokenStatsBackend.Util
             byte[] bytes = Encoding.UTF8.GetBytes(utf8);
             return BitConverter.ToString(bytes).Replace("-", "").ToLowerInvariant();
         }
+
+        public static byte[] HexToBytes(string hex)
+        {
+            if (hex.Length % 2 != 0)
+                throw new ArgumentException("Hex string has invalid length");
+
+            byte[] bytes = new byte[hex.Length / 2];
+            for (int i = 0; i < bytes.Length; i++)
+                bytes[i] = Convert.ToByte(hex.Substring(i * 2, 2), 16);
+
+            return bytes;
+        }
     }
 }
