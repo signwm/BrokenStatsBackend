@@ -1,23 +1,25 @@
-using BrokenStatsBackend.Util;
+
 using System.Text;
 
 namespace BrokenStatsBackend.src.Network
 {
     public class PacketHandler
     {
-        private class MessageDefinition(string name, string startMarkerHex, Action<DateTime, string, string> consumer)
+        private class MessageDefinition(string name, string startMarker, Action<DateTime, string, string> consumer)
         {
             public readonly string Name = name;
-            public readonly byte[] StartMarker = PacketEncoding.HexToBytes(startMarkerHex);
+            public readonly byte[] StartMarker = Encoding.ASCII.GetBytes(startMarker);
+
             public readonly Action<DateTime, string, string> Consumer = consumer;
         }
 
         private readonly List<MessageDefinition> definitions = [];
         private readonly List<byte> buffer = [];
 
-        public void RegisterBuffer(string name, string startMarkerHex, Action<DateTime, string, string> consumer)
+        public void RegisterBuffer(string name, string startMarker, Action<DateTime, string, string> consumer)
         {
-            definitions.Add(new MessageDefinition(name, startMarkerHex.ToLowerInvariant(), consumer));
+            definitions.Add(new MessageDefinition(name, startMarker, consumer));
+
         }
 
         public void HandlePacket(DateTime timestamp, string traceId, byte[] payload)
