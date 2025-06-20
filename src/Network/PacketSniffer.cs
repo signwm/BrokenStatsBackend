@@ -62,14 +62,11 @@ namespace BrokenStatsBackend.src.Network
 
             if (tcpPacket != null && ipPacket != null && tcpPacket.PayloadData.Length > 0)
             {
-                string hex = BitConverter.ToString(tcpPacket.PayloadData).ToLowerInvariant();
-
-                if (!hex.Equals("39-39-00"))
+                var data = tcpPacket.PayloadData;
+                if (!(data.Length == 3 && data[0] == 0x39 && data[1] == 0x39 && data[2] == 0x00))
                 {
                     DateTime timestamp = DateTime.Now;
-                    packetHandler?.HandlePacket(timestamp, traceId, hex);
-                    //PayloadLogger.SavePayload(tcpPacket.PayloadData);
-
+                    packetHandler?.HandlePacket(timestamp, traceId, data);
                 }
             }
 

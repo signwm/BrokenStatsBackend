@@ -7,15 +7,14 @@ namespace BrokenStatsBackend.src.Network
         private static readonly string PacketDirectory = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "packets");
         private static readonly string DebugLogPath = Path.Combine(PacketDirectory, "payload_debug.log");
 
-        public static void SavePayload(byte[] payload)
+        public static void SavePayload(string utf8Text)
         {
             try
             {
-                if (payload == null || payload.Length == 0)
+                if (string.IsNullOrEmpty(utf8Text))
                     return;
 
-                // Zamiana na tekst UTF8, null → "_"
-                string utf8Text = Encoding.UTF8.GetString(payload).Replace("\0", "_");
+                utf8Text = utf8Text.Replace("\0", "_");
 
                 // Zapis debugowy — żebyś widział, czy w ogóle się odpala
                 LogDebug("Received: " + utf8Text);
