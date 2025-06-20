@@ -37,9 +37,9 @@ Task task = Task.Run(() =>
     var repository = new FightRepository(context);
     var handler = new PacketHandler();
 
-    handler.RegisterBuffer(new PacketBuffer(
+    handler.RegisterBuffer(
         "summary",
-        "33-3b-31-39-3b",      // start 3;19;
+        "3;19;",
         (timestamp, traceId, content) =>
         {
             try
@@ -52,16 +52,16 @@ Task task = Task.Run(() =>
             {
                 Console.WriteLine(ex);
             }
-        }));
+        });
 
-    handler.RegisterBuffer(new PacketBuffer("prices", "33-36-3b-30-3b", (timestamp, traceId, content) =>
+    handler.RegisterBuffer("prices", "36;0;", (timestamp, traceId, content) =>
     {
         PricesParser.UpdateItemPrices(context, timestamp, traceId, content);
-    }));
-    handler.RegisterBuffer(new PacketBuffer("drif", "35-30-3b-30-3b", (timestamp, traceId, content) =>
+    });
+    handler.RegisterBuffer("drif", "50;0;", (timestamp, traceId, content) =>
     {
         PricesParser.UpdateDrifPrices(context, timestamp, traceId, content);
-    }));
+    });
 
     var sniffer = new PacketSniffer();
     sniffer.AddPacketHandler(handler);
