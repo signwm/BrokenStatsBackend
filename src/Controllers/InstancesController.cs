@@ -17,20 +17,18 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
     [HttpGet("days")]
     public async Task<IActionResult> GetDays()
     {
-        DateTime today = DateTime.Today;
-        DateTime monthAgo = today.AddDays(-30);
         var counts = await _db.Instances
-            .Where(i => i.StartTime.Date >= monthAgo)
             .GroupBy(i => i.StartTime.Date)
             .Select(g => new { Date = g.Key, Count = g.Count() })
-            .ToDictionaryAsync(g => g.Date, g => g.Count);
-        var result = Enumerable.Range(0, 31)
-            .Select(offset => today.AddDays(-offset))
-            .Select(d => new
-            {
-                date = d.ToString("yyyy-MM-dd"),
-                count = counts.TryGetValue(d, out var c) ? c : 0
-            });
+            .OrderByDescending(g => g.Date)
+            .ToListAsync();
+
+        var result = counts.Select(c => new
+        {
+            date = c.Date.ToString("yyyy-MM-dd"),
+            count = c.Count
+        });
+
         return Ok(result);
     }
 
