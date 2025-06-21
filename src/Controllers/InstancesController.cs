@@ -68,6 +68,7 @@ public class InstancesController(AppDbContext db) : ControllerBase
             Exp = f.Exp,
             Gold = f.Gold,
             Psycho = f.Psycho,
+            DropValue = f.Drops.Sum(FightsController.GetDropValueStatic),
             Opponents = string.Join(", ",
                 f.Opponents
                     .GroupBy(o => o.OpponentType.Name)
@@ -109,6 +110,7 @@ public class InstancesController(AppDbContext db) : ControllerBase
             Exp = f.Exp,
             Gold = f.Gold,
             Psycho = f.Psycho,
+            DropValue = f.Drops.Sum(FightsController.GetDropValueStatic),
             Opponents = string.Join(", ",
                 f.Opponents
                     .GroupBy(o => new { o.OpponentType.Name, o.OpponentType.Level })

@@ -41,6 +41,7 @@ public class FightsController(AppDbContext db) : ControllerBase
             Exp = fight.Exp,
             Gold = fight.Gold,
             Psycho = fight.Psycho,
+            DropValue = fight.Drops.Sum(GetDropValue),
             Opponents = string.Join(", ",
                 fight.Opponents
                     .GroupBy(o => new { o.OpponentType.Name, o.OpponentType.Level })
@@ -217,6 +218,8 @@ public class FightsController(AppDbContext db) : ControllerBase
         });
     }
 
+
+    public static int GetDropValueStatic(DropEntity drop) => GetDropValue(drop);
 
     private static int GetDropValue(DropEntity drop)
     {
