@@ -45,15 +45,8 @@ app.Use(async (context, next) =>
         throw;
     }
 });
+app.UseDeveloperExceptionPage();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseDeveloperExceptionPage();
-}
-else
-{
-    app.UseExceptionHandler("/error");
-}
 
 app.Map("/error", () => Results.Problem("An error occurred."));
 

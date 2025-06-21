@@ -143,6 +143,7 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
     [HttpPost]
     public async Task<IActionResult> CreateInstance([FromBody] CreateInstanceDto dto)
     {
+        _logger.LogInformation("CreateInstance entered: {@dto}", dto);
         var fights = await _db.Fights
             .Where(f => dto.FightIds.Contains(f.PublicId) && f.InstanceId == null)
             .ToListAsync();
@@ -151,7 +152,11 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
         DateTime start = fights.Min(f => f.Time).AddSeconds(-10);
         DateTime end = fights.Max(f => f.Time);
 
-        long nextId = await _db.Instances.Select(i => i.InstanceId).DefaultIfEmpty(0).MaxAsync() + 1;
+        long nextId = (_db.Instances.Any()
+            ? await _db.Instances.MaxAsync(i => i.InstanceId)
+            : 0) + 1;
+
+
 
         var instance = new InstanceEntity
         {
@@ -171,9 +176,9 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to create instance");
-            throw;
+            return StatusCode(500, new { error = ex.Message, stack = ex.StackTrace });
         }
+
     }
 
     private static int DropTypeOrder(string type) => type.ToLower() switch

@@ -4,5 +4,5 @@ public class CreateInstanceDto
 {
     public string Name { get; set; } = string.Empty;
     public int Difficulty { get; set; }
-    public Guid[] FightIds { get; set; } = Array.Empty<Guid>();
+    public List<Guid> FightIds { get; set; } = [];
 }
