@@ -2,14 +2,17 @@ using BrokenStatsBackend.src.Database;
 using BrokenStatsBackend.src.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using System;
 
 namespace BrokenStatsBackend.src.Controllers;
 
 [ApiController]
 [Route("api/fights")]
-public class FightsController(AppDbContext db) : ControllerBase
+public class FightsController(AppDbContext db, ILogger<FightsController> logger) : ControllerBase
 {
     private readonly AppDbContext _db = db;
+    private readonly ILogger<FightsController> _logger = logger;
 
     [HttpGet("flat")]
     public async Task<ActionResult<IEnumerable<FightFlatDto>>> GetFlat(
@@ -17,6 +20,8 @@ public class FightsController(AppDbContext db) : ControllerBase
        DateTime? endDateTime = null,
        string? search = null)
     {
+        try
+        {
         var query = _db.Fights
             .Include(f => f.Opponents).ThenInclude(o => o.OpponentType)
             .Include(f => f.Drops).ThenInclude(d => d.DropItem).ThenInclude(di => di.DropType)
@@ -80,11 +85,19 @@ public class FightsController(AppDbContext db) : ControllerBase
         }
 
         return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get fights");
+            throw;
+        }
     }
 
     [HttpGet("summary")]
     public async Task<IActionResult> GetSummary([FromQuery] DateTime from, [FromQuery] DateTime to)
     {
+        try
+        {
         var fights = await _db.Fights
             .Include(f => f.Drops)
                 .ThenInclude(d => d.DropItem)
@@ -148,11 +161,19 @@ public class FightsController(AppDbContext db) : ControllerBase
             rare,
             dropValuesPerType
         });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get summary");
+            throw;
+        }
     }
 
     [HttpPost("summary")]
     public async Task<IActionResult> GetSummaryByIds([FromBody] Guid[] ids)
     {
+        try
+        {
         var fights = await _db.Fights
             .Include(f => f.Drops)
                 .ThenInclude(d => d.DropItem)
@@ -216,6 +237,12 @@ public class FightsController(AppDbContext db) : ControllerBase
             rare,
             dropValuesPerType
         });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get summary by ids");
+            throw;
+        }
     }
 
 
