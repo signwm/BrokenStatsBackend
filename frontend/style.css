@@ -199,7 +199,8 @@ form {
 .instances-layout {
   display: grid;
   grid-template-columns: 200px 300px 1fr;
-  grid-template-rows: auto 1fr;
+  /* Avoid stretching the fights table when it has little content */
+  grid-template-rows: auto auto;
   gap: 20px;
   max-width: 1400px;
   margin: 0 auto;

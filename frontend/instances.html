@@ -138,6 +138,8 @@ function renderInstanceList(list){
     none.addEventListener('click',e=>{if(e.target===noneCb) return;viewedInstance='none'; localStorage.setItem('selectedInstance',viewedInstance); loadFights(); renderInstanceList(list);});
     ul.appendChild(none);
     updateInstanceState('none');
+    // Sort instances by start time descending so the newest are first
+    list.sort((a,b)=> new Date(b.startTime) - new Date(a.startTime));
     list.forEach(inst=>{
         const diffChar = inst.difficulty===2?'Ł':inst.difficulty===1?'N':'T';
         let time='trwa';
