@@ -8,12 +8,14 @@
 </head>
 <body class="bg-dark text-light">
     <h1 class="mb-3">Instancje</h1>
+    <section id="summary" class="mb-3"></section>
     <div class="instances-layout">
         <ul id="dayList" class="day-list"></ul>
         <ul id="instanceList" class="instance-list"></ul>
         <table id="fightsTable" class="custom-dark-table">
             <thead>
                 <tr>
+                    <th scope="col"><input type="checkbox" id="selectAll"></th>
                     <th scope="col">Czas</th>
                     <th scope="col">Exp</th>
                     <th scope="col">Gold</th>
@@ -27,16 +29,40 @@
     </div>
 <script>
 let selectedDay = localStorage.getItem('selectedDay');
-let selectedInstance = localStorage.getItem('selectedInstance');
+let viewedInstance = localStorage.getItem('selectedInstance');
+
+let selectedInstances = new Set(JSON.parse(localStorage.getItem('selectedInstances') || '[]'));
+const selectedIds = new Set();
+const dayInstances = {};
+const instanceFights = {};
+const instanceDay = {};
+let lastClickedIndex = null;
 
 function pad(n){return n.toString().padStart(2,'0');}
-function formatDate(d){return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;}
 function formatMMSS(sec){const m=Math.floor(sec/60);const s=sec%60;return `${pad(m)}:${pad(s)}`;}
+function formatDateTime(value){const d=new Date(value);const p=n=>n.toString().padStart(2,'0');return `${p(d.getDate())}.${p(d.getMonth()+1)}.${d.getFullYear().toString().slice(-2)}, ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;}
+function formatNumber(v){return Number(v).toLocaleString();}
+function formatDuration(ms){const s=Math.floor(ms/1000);const h=Math.floor(s/3600);const m=Math.floor((s%3600)/60);const sec=s%60;const p=n=>n.toString().padStart(2,'0');return `${p(h)}h ${p(m)}m ${p(sec)}s`;}
 
 async function loadDays(){
     const days = await (await fetch('/api/instances/days')).json();
-    if(!selectedDay){ selectedDay = days[0].date; }
+    if(!selectedDay) selectedDay = days[0].date;
+    await Promise.all(days.map(async d=>{
+        const list = await (await fetch('/api/instances/byDay?date='+d.date)).json();
+        dayInstances[d.date]=list;
+        list.forEach(i=>{instanceDay[i.id]=d.date;});
+    }));
+    await initializeSelections();
     renderDayList(days);
+    loadInstances();
+}
+
+async function initializeSelections(){
+    for(const id of Array.from(selectedInstances)){
+        const fights = await loadInstanceFights(id);
+        fights.forEach(f=> selectedIds.add(f.id.toString()));
+    }
+    updateSummary();
 }
 
 function renderDayList(days){
@@ -44,17 +70,31 @@ function renderDayList(days){
     ul.innerHTML='';
     days.forEach(d=>{
         const li=document.createElement('li');
-        li.textContent=`${d.date} (${d.count})`;
+        const cb=document.createElement('input');
+        cb.type='checkbox';
+        cb.dataset.date=d.date;
+        cb.addEventListener('change',()=>toggleDay(d.date,cb.checked));
+        li.appendChild(cb);
+        li.appendChild(document.createTextNode(` ${d.date} (${d.count})`));
         li.dataset.date=d.date;
         if(d.date===selectedDay) li.classList.add('selected');
-        li.addEventListener('click',()=>{ selectedDay=d.date; localStorage.setItem('selectedDay',selectedDay); loadInstances(); renderDayList(days); });
+        li.addEventListener('click',e=>{if(e.target===cb) return; selectedDay=d.date; localStorage.setItem('selectedDay',selectedDay); loadInstances(); renderDayList(days);});
         ul.appendChild(li);
+        updateDayState(d.date);
     });
 }
 
+async function toggleDay(date, state){
+    const list = dayInstances[date];
+    for(const inst of list){
+        await toggleInstance(inst.id,state,false);
+    }
+    updateDayState(date);
+    updateSummary();
+}
+
 async function loadInstances(){
-    const res = await fetch('/api/instances/byDay?date='+selectedDay);
-    const list = await res.json();
+    const list = dayInstances[selectedDay];
     renderInstanceList(list);
 }
 
@@ -62,55 +102,157 @@ function renderInstanceList(list){
     const ul=document.getElementById('instanceList');
     ul.innerHTML='';
     const none=document.createElement('li');
-    none.textContent='Bez instancji';
+    const noneCb=document.createElement('input');
+    noneCb.type='checkbox';
+    noneCb.dataset.id='none';
+    noneCb.addEventListener('change',()=>toggleInstance('none',noneCb.checked));
+    none.appendChild(noneCb);
+    none.appendChild(document.createTextNode(' Bez instancji'));
     none.dataset.id='none';
-    if(!selectedInstance) selectedInstance='none';
-    if(selectedInstance==='none') none.classList.add('selected');
-    none.addEventListener('click',()=>{selectedInstance='none'; localStorage.setItem('selectedInstance',selectedInstance); loadFights(); renderInstanceList(list);});
+    if(!viewedInstance) viewedInstance='none';
+    if(viewedInstance==='none') none.classList.add('selected');
+    none.addEventListener('click',e=>{if(e.target===noneCb) return;viewedInstance='none'; localStorage.setItem('selectedInstance',viewedInstance); loadFights(); renderInstanceList(list);});
     ul.appendChild(none);
-    let defaultSet=false;
     list.forEach(inst=>{
         const diffChar = inst.difficulty===2?'Ł':inst.difficulty===1?'N':'T';
         let time='trwa';
-        if(inst.endTime) {
-            const sec=Math.floor((new Date(inst.endTime)-new Date(inst.startTime))/1000);
-            time=formatMMSS(sec);
-        }
+        if(inst.endTime){const sec=Math.floor((new Date(inst.endTime)-new Date(inst.startTime))/1000);time=formatMMSS(sec);}
         const li=document.createElement('li');
-        li.textContent=`${inst.name} [${diffChar}] (${time})`;
+        const cb=document.createElement('input');
+        cb.type='checkbox';
+        cb.dataset.id=inst.id;
+        cb.addEventListener('change',()=>toggleInstance(inst.id,cb.checked));
+        li.appendChild(cb);
+        li.appendChild(document.createTextNode(` ${inst.name} [${diffChar}] (${time})`));
         li.dataset.id=inst.id;
-        if(!selectedInstance && !defaultSet && !inst.endTime){selectedInstance=inst.id.toString();defaultSet=true;}
-        if(inst.id.toString()===selectedInstance) li.classList.add('selected');
-        li.addEventListener('click',()=>{selectedInstance=inst.id.toString(); localStorage.setItem('selectedInstance',selectedInstance); loadFights(); renderInstanceList(list);});
+        if(inst.id.toString()===viewedInstance) li.classList.add('selected');
+        li.addEventListener('click',e=>{if(e.target===cb) return;viewedInstance=inst.id.toString(); localStorage.setItem('selectedInstance',viewedInstance); loadFights(); renderInstanceList(list);});
         ul.appendChild(li);
+        updateInstanceState(inst.id);
     });
-    localStorage.setItem('selectedInstance',selectedInstance);
+    localStorage.setItem('selectedInstance',viewedInstance);
     loadFights();
+}
+
+async function loadInstanceFights(id){
+    if(instanceFights[id]) return instanceFights[id];
+    let fights;
+    if(id==='none'){
+        fights = await (await fetch('/api/instances/without/fights')).json();
+    }else{
+        fights = await (await fetch('/api/instances/'+id+'/fights')).json();
+    }
+    instanceFights[id]=fights;
+    return fights;
+}
+
+async function toggleInstance(id,state,updateDay=true){
+    const fights = await loadInstanceFights(id);
+    if(state){
+        selectedInstances.add(id);
+        fights.forEach(f=> selectedIds.add(f.id.toString()));
+    }else{
+        selectedInstances.delete(id);
+        fights.forEach(f=> selectedIds.delete(f.id.toString()));
+    }
+    localStorage.setItem('selectedInstances',JSON.stringify(Array.from(selectedInstances)));
+    updateInstanceState(id);
+    if(updateDay && instanceDay[id]) updateDayState(instanceDay[id]);
+    updateSelectAllState();
+    updateSummary();
+}
+
+function updateInstanceState(id){
+    const cb=document.querySelector(`input[data-id="${id}"]`);
+    if(!cb) return;
+    const fights=instanceFights[id];
+    if(!fights){
+        cb.checked=selectedInstances.has(id);
+        cb.indeterminate=false;
+        return;
+    }
+    const total=fights.length;
+    const sel=fights.filter(f=>selectedIds.has(f.id.toString())).length;
+    cb.indeterminate=sel>0 && sel<total;
+    cb.checked=sel===total;
+}
+
+function updateDayState(date){
+    const cb=document.querySelector(`input[data-date="${date}"]`);
+    if(!cb) return;
+    const list=dayInstances[date];
+    if(!list){cb.checked=false;cb.indeterminate=false;return;}
+    const states=list.map(inst=>{
+        const fights=instanceFights[inst.id];
+        if(!fights) return selectedInstances.has(inst.id)?1:0;
+        const total=fights.length;
+        const sel=fights.filter(f=>selectedIds.has(f.id.toString())).length;
+        if(sel===0) return 0; if(sel===total) return 1; return 0.5;
+    });
+    if(states.every(s=>s===1)) {cb.checked=true;cb.indeterminate=false;}
+    else if(states.every(s=>s===0)) {cb.checked=false;cb.indeterminate=false;}
+    else {cb.checked=false;cb.indeterminate=true;}
 }
 
 async function loadFights(){
     const tbody=document.querySelector('#fightsTable tbody');
     tbody.innerHTML='';
-    if(selectedInstance==='none'){
-        const fights=await (await fetch('/api/instances/without/fights')).json();
-        fights.forEach(f=>{
-            const tr=document.createElement('tr');
-            const t=new Date(f.time);
-            const time=`${pad(t.getDate())}.${pad(t.getMonth()+1)} ${pad(t.getHours())}:${pad(t.getMinutes())}:${pad(t.getSeconds())}`;
-            tr.innerHTML=`<td>${time}</td><td>${f.exp}</td><td>${f.gold}</td><td>${f.psycho}</td><td>${f.opponents}</td><td>${f.drops}</td>`;
-            tbody.appendChild(tr);
-        });
-    }else{
-        const fights=await (await fetch('/api/instances/'+selectedInstance+'/fights')).json();
-        fights.forEach(f=>{
-            const tr=document.createElement('tr');
-            tr.innerHTML=`<td>${formatMMSS(f.offsetSeconds)}</td><td>${f.exp}</td><td>${f.gold}</td><td>${f.psycho}</td><td>${f.opponents}</td><td>${f.drops}</td>`;
-            tbody.appendChild(tr);
-        });
-    }
+    const fights = await loadInstanceFights(viewedInstance);
+    fights.forEach((f,i)=>{
+        const tr=document.createElement('tr');
+        const checked=selectedIds.has(f.id.toString())?'checked':'';
+        const displayTime = viewedInstance==='none' ? (()=>{const t=new Date(f.time);return `${pad(t.getDate())}.${pad(t.getMonth()+1)} ${pad(t.getHours())}:${pad(t.getMinutes())}:${pad(t.getSeconds())}`;})() : formatMMSS(f.offsetSeconds);
+        tr.innerHTML=`<td><input type="checkbox" data-fight="${f.id}" data-index="${i}" ${checked}></td><td>${displayTime}</td><td>${f.exp}</td><td>${f.gold}</td><td>${f.psycho}</td><td>${f.opponents}</td><td>${f.drops}</td>`;
+        tbody.appendChild(tr);
+    });
+    const checkboxes=Array.from(tbody.querySelectorAll('input[type="checkbox"]'));
+    checkboxes.forEach((cb,index)=>{
+        cb.dataset.index=index;
+        cb.addEventListener('click',e=>{
+            const id=cb.getAttribute('data-fight');
+            if(e.shiftKey && lastClickedIndex!==null){
+                const start=Math.min(lastClickedIndex,index);const end=Math.max(lastClickedIndex,index);const target=cb.checked;for(let i=start;i<=end;i++){const other=checkboxes[i];other.checked=target;const otherId=other.getAttribute('data-fight');if(target) selectedIds.add(otherId); else selectedIds.delete(otherId);} }
+            else {if(cb.checked) selectedIds.add(id); else selectedIds.delete(id);} lastClickedIndex=index; updateInstanceState(viewedInstance); if(instanceDay[viewedInstance]) updateDayState(instanceDay[viewedInstance]); updateSelectAllState(); updateSummary();});
+    });
+    updateSelectAllState();
 }
 
-function refresh(){loadDays().then(loadInstances);}
+function updateSelectAllState(){
+    const all=document.querySelectorAll('#fightsTable tbody input[type="checkbox"]');
+    const header=document.getElementById('selectAll');
+    if(!header) return;
+    header.checked=all.length>0 && Array.from(all).every(cb=>cb.checked);
+}
+
+document.getElementById('selectAll').addEventListener('change',e=>{
+    document.querySelectorAll('#fightsTable tbody input[type="checkbox"]').forEach(cb=>{cb.checked=e.target.checked;const id=cb.getAttribute('data-fight');if(cb.checked) selectedIds.add(id); else selectedIds.delete(id);});
+    updateInstanceState(viewedInstance); if(instanceDay[viewedInstance]) updateDayState(instanceDay[viewedInstance]); updateSummary();});
+
+async function updateSummary(){
+    if(selectedIds.size===0){
+        document.getElementById('summary').innerHTML=`<div class="no-fights-card"><p class="no-fights-text">Żadna walka nie została zaznaczona.</p></div>`;
+        return;
+    }
+    const res = await fetch('/api/fights/summary',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Array.from(selectedIds))});
+    const summary = await res.json();
+    const s=document.getElementById('summary');
+    const items=summary.items.map(d=>`<li><span class="badge bg-primary me-1">${d.count}</span>${d.name}</li>`).join('');
+    const drifs=summary.drifs.map(d=>`<li><span class="badge bg-primary me-1">${d.count}</span>${d.name}</li>`).join('');
+    const syner=summary.synergetics.map(d=>`<li><span class="badge bg-primary me-1">${d.count}</span>${d.name}</li>`).join('');
+    const trash=summary.trash.map(d=>`<li><span class="badge bg-primary me-1">${d.count}</span>${d.name}</li>`).join('');
+    const rare=summary.rare.map(d=>`<li><span class="badge bg-primary me-1">${d.count}</span>${d.name}</li>`).join('');
+    const dropValues={};Object.entries(summary.dropValuesPerType).forEach(([k,v])=>dropValues[k.toLowerCase()]=v);
+    const itemsVal=formatNumber(dropValues['item']||0);
+    const drifVal=formatNumber(dropValues['drif']||0);
+    const synerVal=formatNumber(dropValues['synergetic']||0);
+    const trashVal=formatNumber(dropValues['trash']||0);
+    const rareVal=formatNumber(dropValues['rare']||0);
+    const day=formatDateTime(summary.sessionStart).split(',')[0];
+    const duration=formatDuration(new Date(summary.sessionEnd)-new Date(summary.sessionStart));
+    s.innerHTML=`<div class="summary-grid"><div class="summary-card"><div class="summary-title">EXP</div><div class="summary-value">${formatNumber(summary.totalExp)}</div></div><div class="summary-card"><div class="summary-title">Gold</div><div class="summary-value">${formatNumber(summary.totalGold)}</div></div><div class="summary-card"><div class="summary-title">Psycho</div><div class="summary-value">${formatNumber(summary.totalPsycho)}</div></div><div class="summary-card"><div class="summary-title">Walki</div><div class="summary-value">${formatNumber(summary.fightsCount)}</div></div><div class="summary-card"><div class="summary-title">Czas trwania</div><div class="summary-value">${duration}</div></div></div><div class="summary-group"><h3>Dzień: ${day}</h3></div><div class="summary-grid"><div class="summary-card"><div class="summary-title">Użytkowe <span class="badge bg-light text-dark ms-1">${itemsVal}g</span></div><ul class="item-list">${items}</ul></div><div class="summary-card"><div class="summary-title">Drify <span class="badge bg-light text-dark ms-1">${drifVal}g</span></div><ul class="item-list">${drifs}</ul></div><div class="summary-card"><div class="summary-title">Syngi <span class="badge bg-light text-dark ms-1">${synerVal}g</span></div><ul class="item-list">${syner}</ul></div><div class="summary-card"><div class="summary-title">Śmieci <span class="badge bg-light text-dark ms-1">${trashVal}g</span></div><ul class="item-list">${trash}</ul></div><div class="summary-card"><div class="summary-title">Rary <span class="badge bg-light text-dark ms-1">${rareVal}g</span></div><ul class="item-list">${rare}</ul></div></div>`;
+}
+
+function refresh(){loadDays();}
 refresh();
 setInterval(refresh,10000);
 </script>
