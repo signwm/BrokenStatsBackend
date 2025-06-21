@@ -6,6 +6,10 @@ namespace BrokenStatsBackend.src.Models
 
         public Guid PublicId { get; set; } = Guid.NewGuid();
         public DateTime Time { get; set; }
+
+        public int? InstanceId { get; set; }
+        public InstanceEntity? Instance { get; set; }
+
         public int Gold { get; set; }
         public int Psycho { get; set; }
         public int Exp { get; set; }

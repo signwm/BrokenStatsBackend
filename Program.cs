@@ -44,6 +44,7 @@ Task task = Task.Run(() =>
     context.Database.EnsureCreated();
     var fightRepository = new FightRepository(context);
     var instanceRepository = new InstanceRepository(context);
+    fightRepository.AssignInstancesToExistingFightsAsync().GetAwaiter().GetResult();
     var completionTracker = new InstanceCompletionTracker(instanceRepository);
     var handler = new PacketHandler();
 
