@@ -9,9 +9,14 @@
 <body class="bg-dark text-light">
     <h1 class="mb-3">Instancje</h1>
     <div class="instances-layout">
-        <section id="summary" class="mb-3 summary-cell"></section>
-        <button id="clearSelection" class="btn btn-secondary summary-cell mb-3">Odznacz wszystko</button>
-        <button id="newInstanceBtn" class="btn btn-primary summary-cell mb-3">Utwórz instancję</button>
+        <div id="stickyBar" class="summary-cell sticky-bar">
+            <section id="summary" class="mb-3"></section>
+            <div class="button-row mb-3">
+                <button id="clearSelection" class="btn btn-secondary">Odznacz wszystko</button>
+                <button id="newInstanceBtn" class="btn btn-primary">Utwórz instancję</button>
+                <button id="toggleSummary" class="btn btn-secondary">Ukryj podsumowanie</button>
+            </div>
+        </div>
         <ul id="dayList" class="day-list"></ul>
         <ul id="instanceList" class="instance-list"></ul>
         <table id="fightsTable" class="custom-dark-table">
@@ -329,6 +334,17 @@ document.getElementById('selectAll').addEventListener('change',e=>{
 
 document.getElementById('clearSelection').addEventListener('click', clearSelection);
 document.getElementById('newInstanceBtn').addEventListener('click', openCreateInstanceModal);
+document.getElementById('toggleSummary').addEventListener('click', () => {
+    const s = document.getElementById('summary');
+    const btn = document.getElementById('toggleSummary');
+    if (s.style.display === 'none') {
+        s.style.display = '';
+        btn.textContent = 'Ukryj podsumowanie';
+    } else {
+        s.style.display = 'none';
+        btn.textContent = 'Pokaż podsumowanie';
+    }
+});
 
 function clearSelection(){
     selectedIds.clear();

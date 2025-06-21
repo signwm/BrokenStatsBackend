@@ -8,6 +8,7 @@
 </head>
 <body class="bg-dark text-light">
     <h1 class="mb-3">Zepsute Statystyki</h1>
+    <div id="stickyBar" class="sticky-bar">
     <form id="queryForm" class="mb-3">
         <div class="row g-2 align-items-end">
             <div class="col-auto">
@@ -36,7 +37,11 @@
             </div>
         </div>
     </form>
+    <div class="button-row mb-3">
+        <button id="toggleSummary" class="btn btn-secondary">Ukryj podsumowanie</button>
+    </div>
     <section id="summary" class="mb-3"></section>
+    </div>
     <div class="fights-wrapper">
         <table id="fightsTable" class="custom-dark-table">
             <thead>
@@ -111,6 +116,12 @@ document.getElementById('selectAll').addEventListener('change', e => {
         if(cb.checked) selectedIds.add(id); else selectedIds.delete(id);
     });
     updateSummary();
+});
+document.getElementById('toggleSummary').addEventListener('click', ()=>{
+    const s=document.getElementById('summary');
+    const btn=document.getElementById('toggleSummary');
+    if(s.style.display==='none'){s.style.display='';btn.textContent='Ukryj podsumowanie';}
+    else {s.style.display='none';btn.textContent='Pokaż podsumowanie';}
 });
 
 window.onload = setToday;
