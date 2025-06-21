@@ -113,7 +113,9 @@ document.getElementById('selectAll').addEventListener('change', e => {
     document.querySelectorAll('#fightsTable tbody input[type="checkbox"]').forEach(cb => {
         cb.checked = e.target.checked;
         const id = cb.getAttribute('data-id');
-        if(cb.checked) selectedIds.add(id); else selectedIds.delete(id);
+        const row = cb.closest('tr');
+        if(cb.checked){ selectedIds.add(id); row.classList.add('selected'); }
+        else { selectedIds.delete(id); row.classList.remove('selected'); }
     });
     updateSummary();
 });
@@ -155,32 +157,72 @@ function renderTable(fights){
             <td>${f.psycho}</td>
             <td>${f.opponents}</td>
             <td>${f.drops}</td>`;
+        if(checked) tr.classList.add('selected');
         tbody.appendChild(tr);
     });
     const checkboxes = Array.from(tbody.querySelectorAll('input[type="checkbox"]'));
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+
+    function setChecked(idx, state){
+        const cb = checkboxes[idx];
+        if(!cb) return;
+        cb.checked = state;
+        const row = rows[idx];
+        const id = cb.getAttribute('data-id');
+        if(state) { selectedIds.add(id); row.classList.add('selected'); }
+        else { selectedIds.delete(id); row.classList.remove('selected'); }
+    }
+
     checkboxes.forEach((cb, index) => {
         cb.dataset.index = index;
         cb.addEventListener('click', e => {
+            if(dragging){ e.preventDefault(); return; }
             const id = cb.getAttribute('data-id');
             if(e.shiftKey && lastClickedIndex !== null){
                 const start = Math.min(lastClickedIndex, index);
                 const end = Math.max(lastClickedIndex, index);
                 const targetState = cb.checked;
                 for(let i=start; i<=end && i<checkboxes.length; i++){
-                    const other = checkboxes[i];
-                    if(!other) continue;
-                    other.checked = targetState;
-                    const otherId = other.getAttribute('data-id');
-                    if(targetState) selectedIds.add(otherId); else selectedIds.delete(otherId);
+                    setChecked(i, targetState);
                 }
             } else {
-                if(cb.checked) selectedIds.add(id); else selectedIds.delete(id);
+                setChecked(index, cb.checked);
             }
             lastClickedIndex = index;
             updateSummary();
             updateSelectAllState();
         });
     });
+
+    let dragging = false;
+    let dragStart = null;
+    let dragState = null;
+
+    function applyDrag(end){
+        const start = Math.min(dragStart, end);
+        const stop = Math.max(dragStart, end);
+        for(let i=start; i<=stop && i<checkboxes.length; i++){
+            setChecked(i, dragState);
+        }
+        lastClickedIndex = end;
+    }
+
+    rows.forEach((row, idx)=>{
+        row.dataset.index = idx;
+        row.addEventListener('mousedown', e=>{
+            if(e.button!==0) return;
+            dragging = true;
+            dragStart = idx;
+            dragState = !checkboxes[idx].checked;
+            applyDrag(idx);
+            e.preventDefault();
+        });
+        row.addEventListener('mouseenter', ()=>{ if(dragging) applyDrag(idx); });
+    });
+    document.addEventListener('mouseup', ()=>{
+        if(dragging){ dragging = false; updateSummary(); updateSelectAllState(); }
+    });
+
     updateSummary();
     updateSelectAllState();
 }
