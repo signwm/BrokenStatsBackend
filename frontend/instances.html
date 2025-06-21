@@ -32,6 +32,7 @@ let selectedDay = localStorage.getItem('selectedDay');
 let viewedInstance = localStorage.getItem('selectedInstance');
 
 let selectedInstances = new Set(JSON.parse(localStorage.getItem('selectedInstances') || '[]'));
+let selectedNoneDays = new Set(JSON.parse(localStorage.getItem('selectedNoneDays') || '[]'));
 const selectedIds = new Set();
 const dayInstances = {};
 const instanceFights = {};
@@ -71,6 +72,10 @@ async function initializeSelections(){
         const fights = await loadInstanceFights(id);
         fights.forEach(f=> selectedIds.add(f.id.toString()));
     }
+    for(const date of Array.from(selectedNoneDays)){
+        const list = getNoneFightsForDay(date);
+        list.forEach(f=> selectedIds.add(f.id.toString()));
+    }
     updateSummary();
 }
 
@@ -103,6 +108,8 @@ async function toggleDay(date, state){
         const id=f.id.toString();
         if(state) selectedIds.add(id); else selectedIds.delete(id);
     });
+    if(state) selectedNoneDays.add(date); else selectedNoneDays.delete(date);
+    localStorage.setItem('selectedNoneDays', JSON.stringify(Array.from(selectedNoneDays)));
     updateInstanceState('none');
     updateDayState(date);
     updateSummary();
@@ -128,6 +135,7 @@ function renderInstanceList(list){
     if(viewedInstance==='none') none.classList.add('selected');
     none.addEventListener('click',e=>{if(e.target===noneCb) return;viewedInstance='none'; localStorage.setItem('selectedInstance',viewedInstance); loadFights(); renderInstanceList(list);});
     ul.appendChild(none);
+    updateInstanceState('none');
     list.forEach(inst=>{
         const diffChar = inst.difficulty===2?'Ł':inst.difficulty===1?'N':'T';
         let time='trwa';
@@ -163,16 +171,29 @@ async function loadInstanceFights(id){
 
 async function toggleInstance(id,state,updateDay=true){
     const fights = await loadInstanceFights(id);
-    if(state){
-        selectedInstances.add(id);
-        fights.forEach(f=> selectedIds.add(f.id.toString()));
-    }else{
-        selectedInstances.delete(id);
-        fights.forEach(f=> selectedIds.delete(f.id.toString()));
+    if(id === 'none'){
+        const list = getNoneFightsForDay(selectedDay);
+        if(state){
+            selectedNoneDays.add(selectedDay);
+            list.forEach(f=> selectedIds.add(f.id.toString()));
+        }else{
+            selectedNoneDays.delete(selectedDay);
+            list.forEach(f=> selectedIds.delete(f.id.toString()));
+        }
+        localStorage.setItem('selectedNoneDays', JSON.stringify(Array.from(selectedNoneDays)));
+        updateDayState(selectedDay);
+    } else {
+        if(state){
+            selectedInstances.add(id);
+            fights.forEach(f=> selectedIds.add(f.id.toString()));
+        }else{
+            selectedInstances.delete(id);
+            fights.forEach(f=> selectedIds.delete(f.id.toString()));
+        }
+        localStorage.setItem('selectedInstances',JSON.stringify(Array.from(selectedInstances)));
+        if(updateDay && instanceDay[id]) updateDayState(instanceDay[id]);
     }
-    localStorage.setItem('selectedInstances',JSON.stringify(Array.from(selectedInstances)));
     updateInstanceState(id);
-    if(updateDay && instanceDay[id]) updateDayState(instanceDay[id]);
     updateSelectAllState();
     updateSummary();
 }
@@ -180,9 +201,9 @@ async function toggleInstance(id,state,updateDay=true){
 function updateInstanceState(id){
     const cb=document.querySelector(`input[data-id="${id}"]`);
     if(!cb) return;
-    const fights=instanceFights[id];
+    const fights=id==='none'?getNoneFightsForDay(selectedDay):instanceFights[id];
     if(!fights){
-        cb.checked=selectedInstances.has(id);
+        cb.checked=id==='none'?selectedNoneDays.has(selectedDay):selectedInstances.has(id);
         cb.indeterminate=false;
         cb.disabled=false;
         return;
