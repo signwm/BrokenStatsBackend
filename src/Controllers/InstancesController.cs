@@ -137,6 +137,35 @@ public class InstancesController(AppDbContext db) : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost]
+    public async Task<IActionResult> CreateInstance([FromBody] CreateInstanceDto dto)
+    {
+        var fights = await _db.Fights
+            .Where(f => dto.FightIds.Contains(f.PublicId) && f.InstanceId == null)
+            .ToListAsync();
+        if (fights.Count == 0) return BadRequest("No fights found");
+
+        DateTime start = fights.Min(f => f.Time).AddSeconds(-10);
+        DateTime end = fights.Max(f => f.Time);
+
+        long nextId = await _db.Instances.Select(i => i.InstanceId).DefaultIfEmpty(0).MaxAsync() + 1;
+
+        var instance = new InstanceEntity
+        {
+            InstanceId = nextId,
+            Name = dto.Name,
+            Difficulty = dto.Difficulty,
+            StartTime = start,
+            EndTime = end
+        };
+
+        _db.Instances.Add(instance);
+        fights.ForEach(f => f.Instance = instance);
+        await _db.SaveChangesAsync();
+
+        return Ok(new { id = instance.Id });
+    }
+
     private static int DropTypeOrder(string type) => type.ToLower() switch
     {
         "rare" => 0,
