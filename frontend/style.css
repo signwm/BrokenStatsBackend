@@ -201,6 +201,7 @@ form {
   grid-template-columns: 200px 300px 1fr;
   /* Avoid stretching the fights table when it has little content */
   grid-template-rows: auto auto;
+  align-items: start;
   gap: 20px;
   max-width: 1400px;
   margin: 0 auto;
