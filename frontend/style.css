@@ -207,6 +207,19 @@ form {
   margin: 0 auto;
 }
 
+.sticky-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background-color: #121212;
+  padding-top: 20px;
+}
+
+.button-row {
+  display: flex;
+  gap: 10px;
+}
+
 .summary-cell {
   grid-column: 1 / -1;
 }
@@ -216,8 +229,6 @@ form {
   padding: 0;
   background-color: #1e1e1e;
   border-radius: 12px;
-  max-height: 600px;
-  overflow-y: auto;
 }
 .day-list li, .instance-list li {
   padding: 8px 12px;
