@@ -7,6 +7,8 @@ using BrokenStatsBackend.src.Network;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.AspNetCore.Http;
 using System.Linq;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -29,6 +31,17 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+if (app.Environment.IsDevelopment())
+{
+    app.UseDeveloperExceptionPage();
+}
+else
+{
+    app.UseExceptionHandler("/error");
+}
+
+app.Map("/error", () => Results.Problem("An error occurred."));
+
 app.UseCors();
 var frontendPath = Path.Combine(builder.Environment.ContentRootPath, "frontend");
 app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = new PhysicalFileProvider(frontendPath) });
@@ -37,64 +50,80 @@ app.MapGet("/fights", () => Results.File(Path.Combine(frontendPath, "index.html"
 app.MapGet("/instances", () => Results.File(Path.Combine(frontendPath, "instances.html"), "text/html"));
 app.MapControllers();
 
+var scopeFactory = app.Services.GetRequiredService<IServiceScopeFactory>();
+
 // 🔥 Sniffer w tle
 Task task = Task.Run(() =>
 {
-    var context = app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
-    context.Database.EnsureCreated();
-    var fightRepository = new FightRepository(context);
-    var instanceRepository = new InstanceRepository(context);
-    fightRepository.AssignInstancesToExistingFightsAsync().GetAwaiter().GetResult();
-    var completionTracker = new InstanceCompletionTracker(instanceRepository);
+    using (var initScope = scopeFactory.CreateScope())
+    {
+        var initContext = initScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        initContext.Database.EnsureCreated();
+        var fightRepo = new FightRepository(initContext);
+        fightRepo.AssignInstancesToExistingFightsAsync().GetAwaiter().GetResult();
+    }
+
+    var completionTracker = new InstanceCompletionTracker(scopeFactory);
     var handler = new PacketHandler();
 
     handler.RegisterBuffer(
         "summary",
         "3;19;",
-        (timestamp, traceId, content) =>
+        async (timestamp, traceId, content) =>
         {
+            using var scope = scopeFactory.CreateScope();
+            var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
             try
             {
+                var ctx = scope.ServiceProvider.GetRequiredService<AppDbContext>();
                 var rawFightData = FightParser.ParseRawFight(timestamp, Config.PlayerName, content);
                 var fight = FightParser.ToFightEntity(rawFightData);
-                _ = fightRepository.AddFightAsync(fight);
-                _ = completionTracker.ProcessFightAsync(timestamp, rawFightData.Opponents.Select(o => o.Name));
+                var repo = new FightRepository(ctx);
+                await repo.AddFightAsync(fight);
+                await completionTracker.ProcessFightAsync(timestamp, rawFightData.Opponents.Select(o => o.Name));
             }
             catch (Exception ex)
             {
-                Console.WriteLine(ex);
+                logger.LogError(ex, "Error processing fight packet");
             }
         });
 
     handler.RegisterBuffer("prices", "36;0;", (timestamp, traceId, content) =>
     {
-        PricesParser.UpdateItemPrices(context, timestamp, traceId, content);
+        using var scope = scopeFactory.CreateScope();
+        var ctx = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        PricesParser.UpdateItemPrices(ctx, timestamp, traceId, content);
     });
     handler.RegisterBuffer("drif", "50;0;", (timestamp, traceId, content) =>
 
     {
-        PricesParser.UpdateDrifPrices(context, timestamp, traceId, content);
+        using var scope = scopeFactory.CreateScope();
+        var ctx = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        PricesParser.UpdateDrifPrices(ctx, timestamp, traceId, content);
     });
 
-    handler.RegisterBuffer("instance", "1;118;", (timestamp, traceId, content) =>
+    handler.RegisterBuffer("instance", "1;118;", async (timestamp, traceId, content) =>
     {
+        using var scope = scopeFactory.CreateScope();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
         try
         {
+            var ctx = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var repo = new InstanceRepository(ctx);
             var instance = InstanceParser.ToInstanceEntity(timestamp, content);
-            var last = instanceRepository.GetLastInstanceAsync().GetAwaiter().GetResult();
+            var last = await repo.GetLastInstanceAsync();
 
             if (last != null && last.EndTime == null && last.Name == instance.Name)
             {
-                // continuation of the same instance - do nothing
                 return;
             }
 
-            _ = completionTracker.StartNewInstanceAsync(timestamp);
-            _ = instanceRepository.AddInstanceAsync(instance);
+            await completionTracker.StartNewInstanceAsync(timestamp);
+            await repo.AddInstanceAsync(instance);
         }
         catch (Exception ex)
         {
-            Console.WriteLine(ex);
+            logger.LogError(ex, "Error processing instance packet");
         }
     });
 

@@ -2,14 +2,17 @@ using BrokenStatsBackend.src.Database;
 using BrokenStatsBackend.src.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using System;
 
 namespace BrokenStatsBackend.src.Controllers;
 
 [ApiController]
 [Route("api/instances")]
-public class InstancesController(AppDbContext db) : ControllerBase
+public class InstancesController(AppDbContext db, ILogger<InstancesController> logger) : ControllerBase
 {
     private readonly AppDbContext _db = db;
+    private readonly ILogger<InstancesController> _logger = logger;
 
     [HttpGet("days")]
     public async Task<IActionResult> GetDays()
@@ -159,11 +162,18 @@ public class InstancesController(AppDbContext db) : ControllerBase
             EndTime = end
         };
 
-        _db.Instances.Add(instance);
-        fights.ForEach(f => f.Instance = instance);
-        await _db.SaveChangesAsync();
-
-        return Ok(new { id = instance.Id });
+        try
+        {
+            _db.Instances.Add(instance);
+            fights.ForEach(f => f.Instance = instance);
+            await _db.SaveChangesAsync();
+            return Ok(new { id = instance.Id });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to create instance");
+            throw;
+        }
     }
 
     private static int DropTypeOrder(string type) => type.ToLower() switch
