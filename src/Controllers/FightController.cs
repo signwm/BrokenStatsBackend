@@ -120,7 +120,8 @@ public class FightsController(AppDbContext db, ILogger<FightsController> logger)
                 synergetics = new List<object>(),
                 trash = new List<object>(),
                 rare = new List<object>(),
-                dropValuesPerType = new Dictionary<string, int>()
+                dropValuesPerType = new Dictionary<string, int>(),
+                totalGoldWithDrops = 0
             });
         }
 
@@ -146,10 +147,13 @@ public class FightsController(AppDbContext db, ILogger<FightsController> logger)
                 g => g.Sum(GetDropValue)
             );
 
+        var totalGoldWithDrops = totalGold + dropValuesPerType.Values.Sum();
+
         return Ok(new
         {
             totalExp,
             totalGold,
+            totalGoldWithDrops,
             totalPsycho,
             fightsCount,
             sessionStart,
@@ -196,7 +200,8 @@ public class FightsController(AppDbContext db, ILogger<FightsController> logger)
                 synergetics = new List<object>(),
                 trash = new List<object>(),
                 rare = new List<object>(),
-                dropValuesPerType = new Dictionary<string, int>()
+                dropValuesPerType = new Dictionary<string, int>(),
+                totalGoldWithDrops = 0
             });
         }
 
@@ -222,10 +227,13 @@ public class FightsController(AppDbContext db, ILogger<FightsController> logger)
                 g => g.Sum(GetDropValue)
             );
 
+        var totalGoldWithDrops = totalGold + dropValuesPerType.Values.Sum();
+
         return Ok(new
         {
             totalExp,
             totalGold,
+            totalGoldWithDrops,
             totalPsycho,
             fightsCount,
             sessionStart,
