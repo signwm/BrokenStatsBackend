@@ -34,9 +34,13 @@ namespace BrokenStatsBackend.src.Parser
 
             foreach (var playerString in split)
             {
-                var playerData = playerString.Split('&');
+                var trimmed = playerString.Trim();
+                if (string.IsNullOrWhiteSpace(trimmed))
+                    continue;
 
-                if (!playerDataAdded && playerData[1] == playerName)
+                var playerData = trimmed.Split('&');
+
+                if (playerData.Length > 1 && !playerDataAdded && playerData[1] == playerName)
                 {
                     playerDataAdded = true;
                     result.Exp = int.Parse(playerData[2]);
@@ -48,10 +52,10 @@ namespace BrokenStatsBackend.src.Parser
                     result.RawDrifs = playerData.Length > 25 ? playerData[25] : string.Empty;
                     result.RawTrash = playerData.Length > 27 ? playerData[27] : string.Empty;
                 }
-                else if (playerData[0] == "2")
+                else if (playerData.Length > 2 && playerData[0] == "2")
                 {
                     string name = playerData[1].Trim();
-                    int level = int.Parse(playerData[15]);
+                    int level = playerData.Length > 15 ? int.Parse(playerData[15]) : 0;
                     result.Opponents.Add((name, level));
                 }
             }

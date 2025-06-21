@@ -9,6 +9,9 @@ using System.Linq;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Ensure the SQLite data directory exists
+Directory.CreateDirectory(Path.Combine(builder.Environment.ContentRootPath, "data"));
+
 // 🔧 DB i zależności
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite("Data Source=data/data.db"));
@@ -35,6 +38,7 @@ app.MapControllers();
 Task task = Task.Run(() =>
 {
     var context = app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
+    context.Database.EnsureCreated();
     var fightRepository = new FightRepository(context);
     var instanceRepository = new InstanceRepository(context);
     var completionTracker = new InstanceCompletionTracker(instanceRepository);
