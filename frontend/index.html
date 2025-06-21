@@ -262,6 +262,7 @@ async function updateSummary(){
     const synerVal = formatNumber(dropValues['synergetic'] || 0);
     const trashVal = formatNumber(dropValues['trash'] || 0);
     const rareVal = formatNumber(dropValues['rare'] || 0);
+    const totalGoldWithDrops = formatNumber(summary.totalGoldWithDrops);
     const day = formatDateTime(summary.sessionStart).split(',')[0];
     const duration = formatDuration(new Date(summary.sessionEnd) - new Date(summary.sessionStart));
     s.innerHTML = `
@@ -273,6 +274,10 @@ async function updateSummary(){
             <div class="summary-card">
                 <div class="summary-title">Gold</div>
                 <div class="summary-value">${formatNumber(summary.totalGold)}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Gold łącznie</div>
+                <div class="summary-value">${totalGoldWithDrops}</div>
             </div>
             <div class="summary-card">
                 <div class="summary-title">Psycho</div>

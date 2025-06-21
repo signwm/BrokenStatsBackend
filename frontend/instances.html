@@ -472,9 +472,61 @@ async function updateSummary(){
     const synerVal=formatNumber(dropValues['synergetic']||0);
     const trashVal=formatNumber(dropValues['trash']||0);
     const rareVal=formatNumber(dropValues['rare']||0);
+    const totalGoldWithDrops=formatNumber(summary.totalGoldWithDrops);
     const day=formatDateTime(summary.sessionStart).split(',')[0];
     const duration=formatDuration(new Date(summary.sessionEnd)-new Date(summary.sessionStart));
-    s.innerHTML=`<div class="summary-grid"><div class="summary-card"><div class="summary-title">EXP</div><div class="summary-value">${formatNumber(summary.totalExp)}</div></div><div class="summary-card"><div class="summary-title">Gold</div><div class="summary-value">${formatNumber(summary.totalGold)}</div></div><div class="summary-card"><div class="summary-title">Psycho</div><div class="summary-value">${formatNumber(summary.totalPsycho)}</div></div><div class="summary-card"><div class="summary-title">Walki</div><div class="summary-value">${formatNumber(summary.fightsCount)}</div></div><div class="summary-card"><div class="summary-title">Czas trwania</div><div class="summary-value">${duration}</div></div></div><div class="summary-group"><h3>Dzień: ${day}</h3></div><div class="summary-grid"><div class="summary-card"><div class="summary-title">Użytkowe <span class="badge bg-light text-dark ms-1">${itemsVal}g</span></div><ul class="item-list">${items}</ul></div><div class="summary-card"><div class="summary-title">Drify <span class="badge bg-light text-dark ms-1">${drifVal}g</span></div><ul class="item-list">${drifs}</ul></div><div class="summary-card"><div class="summary-title">Syngi <span class="badge bg-light text-dark ms-1">${synerVal}g</span></div><ul class="item-list">${syner}</ul></div><div class="summary-card"><div class="summary-title">Śmieci <span class="badge bg-light text-dark ms-1">${trashVal}g</span></div><ul class="item-list">${trash}</ul></div><div class="summary-card"><div class="summary-title">Rary <span class="badge bg-light text-dark ms-1">${rareVal}g</span></div><ul class="item-list">${rare}</ul></div></div>`;
+    s.innerHTML=`
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="summary-title">EXP</div>
+                <div class="summary-value">${formatNumber(summary.totalExp)}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Gold</div>
+                <div class="summary-value">${formatNumber(summary.totalGold)}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Gold łącznie</div>
+                <div class="summary-value">${totalGoldWithDrops}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Psycho</div>
+                <div class="summary-value">${formatNumber(summary.totalPsycho)}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Walki</div>
+                <div class="summary-value">${formatNumber(summary.fightsCount)}</div>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Czas trwania</div>
+                <div class="summary-value">${duration}</div>
+            </div>
+        </div>
+        <div class="summary-group">
+            <h3>Dzień: ${day}</h3>
+        </div>
+        <div class="summary-grid">
+            <div class="summary-card">
+                <div class="summary-title">Użytkowe <span class="badge bg-light text-dark ms-1">${itemsVal}g</span></div>
+                <ul class="item-list">${items}</ul>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Drify <span class="badge bg-light text-dark ms-1">${drifVal}g</span></div>
+                <ul class="item-list">${drifs}</ul>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Syngi <span class="badge bg-light text-dark ms-1">${synerVal}g</span></div>
+                <ul class="item-list">${syner}</ul>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Śmieci <span class="badge bg-light text-dark ms-1">${trashVal}g</span></div>
+                <ul class="item-list">${trash}</ul>
+            </div>
+            <div class="summary-card">
+                <div class="summary-title">Rary <span class="badge bg-light text-dark ms-1">${rareVal}g</span></div>
+                <ul class="item-list">${rare}</ul>
+            </div>
+        </div>`;
 }
 
 function refresh(){loadDays();}
