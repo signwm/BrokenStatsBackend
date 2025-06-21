@@ -119,6 +119,10 @@ Task task = Task.Run(() =>
             var ctx = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var repo = new InstanceRepository(ctx);
             var instance = InstanceParser.ToInstanceEntity(timestamp, content);
+            if (instance == null)
+            {
+                return;
+            }
             var last = await repo.GetLastInstanceAsync();
 
             if (last != null && last.EndTime == null && last.Name == instance.Name)
