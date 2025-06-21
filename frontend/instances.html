@@ -450,6 +450,7 @@ document.getElementById('confirmCreateInstance').addEventListener('click',async 
     const modal=bootstrap.Modal.getInstance(modalEl);
     modal.hide();
     clearSelection();
+    delete instanceFights['none'];
     refresh();
 });
 
