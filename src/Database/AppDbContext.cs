@@ -29,6 +29,7 @@ namespace BrokenStatsBackend.src.Database
             modelBuilder.Entity<FightEntity>().Property(f => f.Time).HasColumnType("DATETIME");
             modelBuilder.Entity<InstanceEntity>().HasIndex(i => i.InstanceId).IsUnique();
             modelBuilder.Entity<InstanceEntity>().Property(i => i.StartTime).HasColumnType("DATETIME");
+            modelBuilder.Entity<InstanceEntity>().Property(i => i.EndTime).HasColumnType("DATETIME");
 
         }
     }

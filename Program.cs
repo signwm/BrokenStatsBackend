@@ -5,6 +5,7 @@ using BrokenStatsBackend.src.Parser;
 using Microsoft.EntityFrameworkCore;
 using BrokenStatsBackend.src.Network;
 using Microsoft.Extensions.FileProviders;
+using System.Linq;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,6 +37,7 @@ Task task = Task.Run(() =>
     var context = app.Services.CreateScope().ServiceProvider.GetRequiredService<AppDbContext>();
     var fightRepository = new FightRepository(context);
     var instanceRepository = new InstanceRepository(context);
+    var completionTracker = new InstanceCompletionTracker(instanceRepository);
     var handler = new PacketHandler();
 
     handler.RegisterBuffer(
@@ -48,6 +50,7 @@ Task task = Task.Run(() =>
                 var rawFightData = FightParser.ParseRawFight(timestamp, Config.PlayerName, content);
                 var fight = FightParser.ToFightEntity(rawFightData);
                 _ = fightRepository.AddFightAsync(fight);
+                _ = completionTracker.ProcessFightAsync(timestamp, rawFightData.Opponents.Select(o => o.Name));
             }
             catch (Exception ex)
             {
@@ -69,6 +72,7 @@ Task task = Task.Run(() =>
     {
         try
         {
+            _ = completionTracker.StartNewInstanceAsync(timestamp);
             var instance = InstanceParser.ToInstanceEntity(timestamp, content);
             _ = instanceRepository.AddInstanceAsync(instance);
         }
