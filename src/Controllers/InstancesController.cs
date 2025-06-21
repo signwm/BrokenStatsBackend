@@ -17,16 +17,30 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
     [HttpGet("days")]
     public async Task<IActionResult> GetDays()
     {
-        var counts = await _db.Fights
-            .GroupBy(f => f.Time.Date)
-            .Select(g => new { Date = g.Key, Count = g.Count() })
-            .OrderByDescending(g => g.Date)
+        // Collect all days that contain any fights so that days without
+        // instances are also listed. Then gather counts of instances per day
+        // and merge both collections in memory.
+
+        var fightDays = await _db.Fights
+            .Select(f => f.Time.Date)
+            .Distinct()
             .ToListAsync();
 
-        var result = counts.Select(c => new
+        var instanceCounts = await _db.Instances
+            .GroupBy(i => i.StartTime.Date)
+            .Select(g => new { Date = g.Key, Count = g.Count() })
+            .ToListAsync();
+
+        var allDays = fightDays
+            .Union(instanceCounts.Select(ic => ic.Date))
+            .Distinct()
+            .OrderByDescending(d => d)
+            .ToList();
+
+        var result = allDays.Select(d => new
         {
-            date = c.Date.ToString("yyyy-MM-dd"),
-            count = c.Count
+            date = d.ToString("yyyy-MM-dd"),
+            count = instanceCounts.FirstOrDefault(ic => ic.Date == d)?.Count ?? 0
         });
 
         return Ok(result);
