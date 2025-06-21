@@ -14,11 +14,15 @@ public static class InstanceParser
             throw new ArgumentException("Invalid instance id");
 
         string name = parts[1].Trim('[', ']');
+        int difficulty = 1;
+        if (parts.Length >= 4 && int.TryParse(parts[3], out int d))
+            difficulty = d;
 
         return new InstanceEntity
         {
             InstanceId = id,
             Name = name,
+            Difficulty = difficulty,
             StartTime = timestamp
         };
     }
