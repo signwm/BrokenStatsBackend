@@ -199,9 +199,14 @@ form {
 .instances-layout {
   display: grid;
   grid-template-columns: 200px 200px 1fr;
+  grid-template-rows: auto 1fr;
   gap: 20px;
   max-width: 1400px;
   margin: 0 auto;
+}
+
+.summary-cell {
+  grid-column: 1 / -1;
 }
 .day-list, .instance-list {
   list-style: none;
