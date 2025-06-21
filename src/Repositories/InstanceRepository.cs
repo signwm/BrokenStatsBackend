@@ -27,4 +27,11 @@ public class InstanceRepository(AppDbContext context)
             await _context.SaveChangesAsync();
         }
     }
+
+    public async Task<InstanceEntity?> GetLastInstanceAsync()
+    {
+        return await _context.Instances
+            .OrderByDescending(i => i.StartTime)
+            .FirstOrDefaultAsync();
+    }
 }

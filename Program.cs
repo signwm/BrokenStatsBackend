@@ -76,8 +76,16 @@ Task task = Task.Run(() =>
     {
         try
         {
-            _ = completionTracker.StartNewInstanceAsync(timestamp);
             var instance = InstanceParser.ToInstanceEntity(timestamp, content);
+            var last = instanceRepository.GetLastInstanceAsync().GetAwaiter().GetResult();
+
+            if (last != null && last.EndTime == null && last.Name == instance.Name)
+            {
+                // continuation of the same instance - do nothing
+                return;
+            }
+
+            _ = completionTracker.StartNewInstanceAsync(timestamp);
             _ = instanceRepository.AddInstanceAsync(instance);
         }
         catch (Exception ex)
