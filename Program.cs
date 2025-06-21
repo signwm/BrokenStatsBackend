@@ -31,6 +31,21 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+// Log all unhandled exceptions so that they appear in the console
+app.Use(async (context, next) =>
+{
+    try
+    {
+        await next();
+    }
+    catch (Exception ex)
+    {
+        var logger = context.RequestServices.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Unhandled exception for {Path}", context.Request.Path);
+        throw;
+    }
+});
+
 if (app.Environment.IsDevelopment())
 {
     app.UseDeveloperExceptionPage();
