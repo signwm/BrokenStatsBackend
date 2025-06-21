@@ -10,6 +10,7 @@
     <h1 class="mb-3">Instancje</h1>
     <div class="instances-layout">
         <section id="summary" class="mb-3 summary-cell"></section>
+        <button id="clearSelection" class="btn btn-secondary summary-cell mb-3">Odznacz wszystko</button>
         <ul id="dayList" class="day-list"></ul>
         <ul id="instanceList" class="instance-list"></ul>
         <table id="fightsTable" class="custom-dark-table">
@@ -21,7 +22,7 @@
                     <th scope="col">Gold</th>
                     <th scope="col">Psycho</th>
                     <th scope="col">Przeciwnicy</th>
-                    <th scope="col">Łupy</th>
+                    <th scope="col">Wartość</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -38,6 +39,7 @@ const dayInstances = {};
 const instanceFights = {};
 const instanceDay = {};
 let lastClickedIndex = null;
+let loadToken = 0;
 
 function getNoneFightsForDay(date){
     const all = instanceFights['none'] || [];
@@ -248,9 +250,12 @@ function updateDayState(date){
 }
 
 async function loadFights(){
+    const token = ++loadToken;
     const tbody=document.querySelector('#fightsTable tbody');
     tbody.innerHTML='';
     const fights = await loadInstanceFights(viewedInstance);
+    if(token!==loadToken) return;
+    lastClickedIndex=null;
     let list=fights;
     if(viewedInstance==='none'){
         list=fights.filter(f=>{
@@ -262,7 +267,7 @@ async function loadFights(){
         const tr=document.createElement('tr');
         const checked=selectedIds.has(f.id.toString())?'checked':'';
         const displayTime = viewedInstance==='none' ? (()=>{const t=new Date(f.time);return `${pad(t.getDate())}.${pad(t.getMonth()+1)} ${pad(t.getHours())}:${pad(t.getMinutes())}:${pad(t.getSeconds())}`;})() : formatMMSS(f.offsetSeconds);
-        tr.innerHTML=`<td><input type="checkbox" data-fight="${f.id}" data-index="${i}" ${checked}></td><td>${displayTime}</td><td>${f.exp}</td><td>${f.gold}</td><td>${f.psycho}</td><td>${f.opponents}</td><td>${f.drops}</td>`;
+        tr.innerHTML=`<td><input type="checkbox" data-fight="${f.id}" data-index="${i}" ${checked}></td><td>${displayTime}</td><td>${f.exp}</td><td>${f.gold}</td><td>${f.psycho}</td><td>${f.opponents}</td><td>${formatNumber(f.dropValue)}</td>`;
         tbody.appendChild(tr);
     });
     const checkboxes=Array.from(tbody.querySelectorAll('input[type="checkbox"]'));
@@ -289,6 +294,26 @@ function updateSelectAllState(){
 document.getElementById('selectAll').addEventListener('change',e=>{
     document.querySelectorAll('#fightsTable tbody input[type="checkbox"]').forEach(cb=>{cb.checked=e.target.checked;const id=cb.getAttribute('data-fight');if(cb.checked) selectedIds.add(id); else selectedIds.delete(id);});
     updateInstanceState(viewedInstance); if(instanceDay[viewedInstance]) updateDayState(instanceDay[viewedInstance]); updateSummary();});
+
+document.getElementById('clearSelection').addEventListener('click', clearSelection);
+
+function clearSelection(){
+    selectedIds.clear();
+    selectedInstances.clear();
+    selectedNoneDays.clear();
+    localStorage.setItem('selectedInstances','[]');
+    localStorage.setItem('selectedNoneDays','[]');
+    lastClickedIndex=null;
+    document.querySelectorAll('#fightsTable tbody input[type="checkbox"]').forEach(cb=>cb.checked=false);
+    document.querySelectorAll('#instanceList input[type="checkbox"]').forEach(cb=>{cb.checked=false;cb.indeterminate=false;});
+    document.querySelectorAll('#dayList input[type="checkbox"]').forEach(cb=>{cb.checked=false;cb.indeterminate=false;cb.disabled=false;});
+    document.getElementById('selectAll').checked=false;
+    Object.values(dayInstances).flat().forEach(inst=>updateInstanceState(inst.id));
+    updateInstanceState('none');
+    Object.keys(dayInstances).forEach(d=>updateDayState(d));
+    updateSummary();
+    updateSelectAllState();
+}
 
 async function updateSummary(){
     if(selectedIds.size===0){

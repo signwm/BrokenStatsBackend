@@ -198,7 +198,7 @@ form {
 
 .instances-layout {
   display: grid;
-  grid-template-columns: 200px 200px 1fr;
+  grid-template-columns: 200px 300px 1fr;
   grid-template-rows: auto 1fr;
   gap: 20px;
   max-width: 1400px;
