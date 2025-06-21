@@ -98,7 +98,8 @@ async function loadDays(){
         dayInstances[d.date]=list;
         list.forEach(i=>{instanceDay[i.id]=d.date;});
     }));
-    await loadInstanceFights('none');
+    await loadInstanceFights('none', true);
+    if(viewedInstance) await loadInstanceFights(viewedInstance, true);
     await initializeSelections();
     renderDayList(days);
     loadInstances();
@@ -196,8 +197,8 @@ function renderInstanceList(list){
     loadFights();
 }
 
-async function loadInstanceFights(id){
-    if(instanceFights[id]) return instanceFights[id];
+async function loadInstanceFights(id, force=false){
+    if(!force && instanceFights[id]) return instanceFights[id];
     let fights;
     if(id==='none'){
         fights = await (await fetch('/api/instances/without/fights')).json();
