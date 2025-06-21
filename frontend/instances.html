@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <title>Zepsute Statystyki - Instancje</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-dark text-light">
+    <h1 class="mb-3">Instancje</h1>
+    <section id="summary" class="mb-3"></section>
+    <div id="instances"></div>
+<script>
+const selectedIds = new Set(JSON.parse(localStorage.getItem('selectedInstanceFights') || '[]'));
+
+function saveSelection(){
+    localStorage.setItem('selectedInstanceFights', JSON.stringify(Array.from(selectedIds)));
+}
+
+function formatDateTime(value){
+    const d = new Date(value);
+    const pad = n => n.toString().padStart(2,'0');
+    return `${pad(d.getDate())}.${pad(d.getMonth()+1)}.${d.getFullYear().toString().slice(-2)}, ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+function formatNumber(value){ return Number(value).toLocaleString(); }
+function formatDuration(ms){
+    const totalSeconds = Math.floor(ms/1000);
+    const hours = Math.floor(totalSeconds/3600);
+    const minutes = Math.floor((totalSeconds%3600)/60);
+    const seconds = totalSeconds%60;
+    const pad = n => n.toString().padStart(2,'0');
+    return `${pad(hours)}h ${pad(minutes)}m ${pad(seconds)}s`;
+}
+
+function updateParentStates(){
+    document.querySelectorAll('.instance').forEach(inst => {
+        const fightCbs = inst.querySelectorAll('.fight-cb');
+        const instCb = inst.querySelector('.instance-cb');
+        const checked = Array.from(fightCbs).filter(cb=>cb.checked).length;
+        if(checked === 0){ instCb.checked = false; instCb.indeterminate = false; }
+        else if(checked === fightCbs.length){ instCb.checked = true; instCb.indeterminate = false; }
+        else{ instCb.checked = false; instCb.indeterminate = true; }
+    });
+    document.querySelectorAll('.day').forEach(day => {
+        const instCbs = day.querySelectorAll('.instance-cb');
+        const dayCb = day.querySelector('.day-cb');
+        const all = Array.from(instCbs);
+        const allChecked = all.every(cb => cb.checked);
+        const noneChecked = all.every(cb => !cb.checked && !cb.indeterminate);
+        if(allChecked){ dayCb.checked = true; dayCb.indeterminate = false; }
+        else if(noneChecked){ dayCb.checked = false; dayCb.indeterminate = false; }
+        else { dayCb.checked = false; dayCb.indeterminate = true; }
+    });
+}
+
+async function updateSummary(){
+    if(selectedIds.size === 0){
+        document.getElementById('summary').innerHTML = `<div class="no-fights-card"><p class="no-fights-text">Żadna walka nie została zaznaczona.</p></div>`;
+        return;
+    }
+    const res = await fetch('/api/fights/summary',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(Array.from(selectedIds)) });
+    const summary = await res.json();
+    const items = summary.items.map(d=>`<li><span class="badge bg-primary me-1">${d.count}</span>${d.name}</li>`).join('');
+    const drifs = summary.drifs.map(d=>`<li><span class="badge bg-primary me-1">${d.count}</span>${d.name}</li>`).join('');
+    const syner = summary.synergetics.map(d=>`<li><span class="badge bg-primary me-1">${d.count}</span>${d.name}</li>`).join('');
+    const trash = summary.trash.map(d=>`<li><span class="badge bg-primary me-1">${d.count}</span>${d.name}</li>`).join('');
+    const rare = summary.rare.map(d=>`<li><span class="badge bg-primary me-1">${d.count}</span>${d.name}</li>`).join('');
+    const dropValues = {};
+    Object.entries(summary.dropValuesPerType).forEach(([k,v]) => dropValues[k.toLowerCase()] = v);
+    const itemsVal = formatNumber(dropValues['item'] || 0);
+    const drifVal = formatNumber(dropValues['drif'] || 0);
+    const synerVal = formatNumber(dropValues['synergetic'] || 0);
+    const trashVal = formatNumber(dropValues['trash'] || 0);
+    const rareVal = formatNumber(dropValues['rare'] || 0);
+    const day = formatDateTime(summary.sessionStart).split(',')[0];
+    const duration = formatDuration(new Date(summary.sessionEnd) - new Date(summary.sessionStart));
+    document.getElementById('summary').innerHTML = `
+        <div class="summary-grid">
+            <div class="summary-card"><div class="summary-title">EXP</div><div class="summary-value">${formatNumber(summary.totalExp)}</div></div>
+            <div class="summary-card"><div class="summary-title">Gold</div><div class="summary-value">${formatNumber(summary.totalGold)}</div></div>
+            <div class="summary-card"><div class="summary-title">Psycho</div><div class="summary-value">${formatNumber(summary.totalPsycho)}</div></div>
+            <div class="summary-card"><div class="summary-title">Walki</div><div class="summary-value">${formatNumber(summary.fightsCount)}</div></div>
+            <div class="summary-card"><div class="summary-title">Czas trwania</div><div class="summary-value">${duration}</div></div>
+        </div>
+        <div class="summary-group"><h3>Dzień: ${day}</h3></div>
+        <div class="summary-grid">
+            <div class="summary-card"><div class="summary-title">Użytkowe <span class="badge bg-light text-dark ms-1">${itemsVal}g</span></div><ul class="item-list">${items}</ul></div>
+            <div class="summary-card"><div class="summary-title">Drify <span class="badge bg-light text-dark ms-1">${drifVal}g</span></div><ul class="item-list">${drifs}</ul></div>
+            <div class="summary-card"><div class="summary-title">Syngi <span class="badge bg-light text-dark ms-1">${synerVal}g</span></div><ul class="item-list">${syner}</ul></div>
+            <div class="summary-card"><div class="summary-title">Śmieci <span class="badge bg-light text-dark ms-1">${trashVal}g</span></div><ul class="item-list">${trash}</ul></div>
+            <div class="summary-card"><div class="summary-title">Rary <span class="badge bg-light text-dark ms-1">${rareVal}g</span></div><ul class="item-list">${rare}</ul></div>
+        </div>`;
+}
+
+function render(data){
+    const container = document.getElementById('instances');
+    container.innerHTML = '';
+    data.forEach((dayData, di) => {
+        const dayDiv = document.createElement('div');
+        dayDiv.className = 'day';
+        const dayLabel = document.createElement('label');
+        const dayCb = document.createElement('input');
+        dayCb.type = 'checkbox';
+        dayCb.className = 'day-cb me-1';
+        dayLabel.appendChild(dayCb);
+        dayLabel.append(dayData.day);
+        dayDiv.appendChild(dayLabel);
+        const instContainer = document.createElement('div');
+        instContainer.className = 'ms-4';
+        dayData.instances.forEach((inst, ii) => {
+            const instDiv = document.createElement('div');
+            instDiv.className = 'instance';
+            const instLabel = document.createElement('label');
+            const instCb = document.createElement('input');
+            instCb.type = 'checkbox';
+            instCb.className = 'instance-cb me-1';
+            instLabel.appendChild(instCb);
+            instLabel.append(`${inst.name}`);
+            instDiv.appendChild(instLabel);
+            const fightsList = document.createElement('ul');
+            fightsList.className = 'ms-4';
+            inst.fights.forEach(f => {
+                const li = document.createElement('li');
+                const fightLabel = document.createElement('label');
+                const fightCb = document.createElement('input');
+                fightCb.type = 'checkbox';
+                fightCb.className = 'fight-cb me-1';
+                fightCb.dataset.id = f.id;
+                if(selectedIds.has(f.id)) fightCb.checked = true;
+                fightLabel.appendChild(fightCb);
+                fightLabel.append(`${formatDateTime(f.time)} - ${f.opponents}`);
+                li.appendChild(fightLabel);
+                fightsList.appendChild(li);
+            });
+            instDiv.appendChild(fightsList);
+            instContainer.appendChild(instDiv);
+        });
+        dayDiv.appendChild(instContainer);
+        container.appendChild(dayDiv);
+    });
+
+    document.querySelectorAll('.fight-cb').forEach(cb => {
+        cb.addEventListener('change', () => {
+            const id = cb.dataset.id;
+            if(cb.checked) selectedIds.add(id); else selectedIds.delete(id);
+            saveSelection();
+            updateParentStates();
+            updateSummary();
+        });
+    });
+
+    document.querySelectorAll('.instance-cb').forEach(instCb => {
+        instCb.addEventListener('change', () => {
+            const fights = instCb.closest('.instance').querySelectorAll('.fight-cb');
+            fights.forEach(f => { f.checked = instCb.checked; const id = f.dataset.id; if(instCb.checked) selectedIds.add(id); else selectedIds.delete(id); });
+            saveSelection();
+            updateParentStates();
+            updateSummary();
+        });
+    });
+
+    document.querySelectorAll('.day-cb').forEach(dayCb => {
+        dayCb.addEventListener('change', () => {
+            const box = dayCb.closest('.day');
+            box.querySelectorAll('.instance-cb').forEach(icb => { icb.checked = dayCb.checked; icb.indeterminate = false; });
+            box.querySelectorAll('.fight-cb').forEach(f => { f.checked = dayCb.checked; const id = f.dataset.id; if(dayCb.checked) selectedIds.add(id); else selectedIds.delete(id); });
+            saveSelection();
+            updateParentStates();
+            updateSummary();
+        });
+    });
+
+    updateParentStates();
+    updateSummary();
+}
+
+fetch('/api/instances').then(r=>r.json()).then(data => render(data));
+</script>
+</body>
+</html>
