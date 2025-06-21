@@ -27,6 +27,11 @@ namespace BrokenStatsBackend.src.Database
             modelBuilder.Entity<DropItemEntity>().HasIndex(x => new { x.Name, x.Quality }).IsUnique();
             modelBuilder.Entity<FightEntity>().HasIndex(f => f.PublicId).IsUnique();
             modelBuilder.Entity<FightEntity>().Property(f => f.Time).HasColumnType("DATETIME");
+            modelBuilder.Entity<FightEntity>()
+                .HasOne(f => f.Instance)
+                .WithMany()
+                .HasForeignKey(f => f.InstanceId)
+                .OnDelete(DeleteBehavior.SetNull);
             modelBuilder.Entity<InstanceEntity>().HasIndex(i => i.InstanceId).IsUnique();
             modelBuilder.Entity<InstanceEntity>().Property(i => i.StartTime).HasColumnType("DATETIME");
             modelBuilder.Entity<InstanceEntity>().Property(i => i.EndTime).HasColumnType("DATETIME");

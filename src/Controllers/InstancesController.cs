@@ -55,18 +55,16 @@ public class InstancesController(AppDbContext db) : ControllerBase
     {
         var instance = await _db.Instances.FindAsync(id);
         if (instance == null) return NotFound();
-        DateTime start = instance.StartTime;
-        DateTime end = instance.EndTime ?? DateTime.MaxValue;
         var fights = await _db.Fights
             .Include(f => f.Opponents).ThenInclude(o => o.OpponentType)
             .Include(f => f.Drops).ThenInclude(d => d.DropItem).ThenInclude(di => di.DropType)
-            .Where(f => f.Time >= start && f.Time <= end)
+            .Where(f => f.InstanceId == id)
             .OrderBy(f => f.Time)
             .ToListAsync();
         var result = fights.Select(f => new InstanceFightDto
         {
             Id = f.PublicId,
-            OffsetSeconds = (int)(f.Time - start).TotalSeconds,
+            OffsetSeconds = (int)(f.Time - instance.StartTime).TotalSeconds,
             Exp = f.Exp,
             Gold = f.Gold,
             Psycho = f.Psycho,
@@ -101,7 +99,7 @@ public class InstancesController(AppDbContext db) : ControllerBase
         var fights = await _db.Fights
             .Include(f => f.Opponents).ThenInclude(o => o.OpponentType)
             .Include(f => f.Drops).ThenInclude(d => d.DropItem).ThenInclude(di => di.DropType)
-            .Where(f => !_db.Instances.Any(i => f.Time >= i.StartTime && f.Time <= (i.EndTime ?? DateTime.MaxValue)))
+            .Where(f => f.InstanceId == null)
             .OrderByDescending(f => f.Time)
             .ToListAsync();
         var result = fights.Select(f => new FightFlatDto
