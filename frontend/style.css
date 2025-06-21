@@ -195,3 +195,31 @@ form {
   font-style: italic;
   color: #aaa;
 }
+
+.instances-layout {
+  display: grid;
+  grid-template-columns: 200px 200px 1fr;
+  gap: 20px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+.day-list, .instance-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  background-color: #1e1e1e;
+  border-radius: 12px;
+  max-height: 600px;
+  overflow-y: auto;
+}
+.day-list li, .instance-list li {
+  padding: 8px 12px;
+  border-bottom: 1px solid #333;
+  cursor: pointer;
+}
+.day-list li:hover, .instance-list li:hover {
+  background-color: #2e2e2e;
+}
+.day-list li.selected, .instance-list li.selected {
+  background-color: #0066cc;
+}
