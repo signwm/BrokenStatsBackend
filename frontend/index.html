@@ -130,6 +130,7 @@ async function loadData() {
 }
 
 function renderTable(fights){
+    lastClickedIndex = null;
     const tbody = document.querySelector('#fightsTable tbody');
     tbody.innerHTML = '';
     fights.forEach((f, i) => {
@@ -154,8 +155,9 @@ function renderTable(fights){
                 const start = Math.min(lastClickedIndex, index);
                 const end = Math.max(lastClickedIndex, index);
                 const targetState = cb.checked;
-                for(let i=start; i<=end; i++){
+                for(let i=start; i<=end && i<checkboxes.length; i++){
                     const other = checkboxes[i];
+                    if(!other) continue;
                     other.checked = targetState;
                     const otherId = other.getAttribute('data-id');
                     if(targetState) selectedIds.add(otherId); else selectedIds.delete(otherId);
