@@ -17,8 +17,8 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
     [HttpGet("days")]
     public async Task<IActionResult> GetDays()
     {
-        var counts = await _db.Instances
-            .GroupBy(i => i.StartTime.Date)
+        var counts = await _db.Fights
+            .GroupBy(f => f.Time.Date)
             .Select(g => new { Date = g.Key, Count = g.Count() })
             .OrderByDescending(g => g.Date)
             .ToListAsync();
