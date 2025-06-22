@@ -5,6 +5,7 @@ namespace BrokenStatsBackend.src.Models
         public int Id { get; set; }
         public string Name { get; set; } = string.Empty;
         public string? Quality { get; set; }
+        public string? Code { get; set; }
         public int? Value { get; set; }
         public int DropTypeId { get; set; }
         public DropTypeEntity DropType { get; set; } = null!;

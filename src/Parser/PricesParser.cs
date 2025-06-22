@@ -23,7 +23,7 @@ public class PricesParser
 
                     if (int.TryParse(parts[2], out int price))
                     {
-                        UpsertDropItemPrice(db, name, price, dropTypeId: 2); // 🟢 ITEM
+                        UpsertDropItemPrice(db, name, price, dropTypeId: 2);
                         seen.Add(name);
                     }
                 }
@@ -50,10 +50,11 @@ public class PricesParser
                 var parts = row.Split(',');
                 if (parts.Length >= 5)
                 {
+                    string code = parts[0].Trim();
                     string name = parts[4].Trim();
                     if (int.TryParse(parts[1], out int price))
                     {
-                        UpsertDropItemPrice(db, name, price, dropTypeId: 5); // 🟣 DRIF
+                        UpsertDropItemPrice(db, name, price, dropTypeId: 5, code: code); // 🟣 DRIF
                     }
                 }
             }
@@ -68,7 +69,7 @@ public class PricesParser
     }
 
 
-    private static void UpsertDropItemPrice(AppDbContext db, string name, int value, int dropTypeId)
+    private static void UpsertDropItemPrice(AppDbContext db, string name, int value, int dropTypeId, string? code = null)
     {
         var item = db.DropItems.FirstOrDefault(i => i.Name == name);
 
@@ -79,13 +80,25 @@ public class PricesParser
                 Name = name,
                 Value = value,
                 Quality = null,
-                DropTypeId = dropTypeId
+                DropTypeId = dropTypeId,
+                Code = code
             });
         }
-        else if (item.Value != value)
+        else
         {
-            item.Value = value;
-            db.DropItems.Update(item);
+            bool updated = false;
+            if (item.Value != value)
+            {
+                item.Value = value;
+                updated = true;
+            }
+            if (!string.IsNullOrEmpty(code) && item.Code != code)
+            {
+                item.Code = code;
+                updated = true;
+            }
+            if (updated)
+                db.DropItems.Update(item);
         }
     }
 
