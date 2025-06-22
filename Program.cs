@@ -56,6 +56,7 @@ app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = new PhysicalFilePro
 app.UseStaticFiles(new StaticFileOptions { FileProvider = new PhysicalFileProvider(frontendPath) });
 // Serve the main page at / and /instances
 app.MapGet("/instances", () => Results.File(Path.Combine(frontendPath, "index.html"), "text/html"));
+app.MapGet("/session", () => Results.File(Path.Combine(frontendPath, "session.html"), "text/html"));
 app.MapGet("/dashboard", () => Results.File(Path.Combine(frontendPath, "dashboard.html"), "text/html"));
 app.MapControllers();
 
