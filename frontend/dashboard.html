@@ -27,6 +27,7 @@
     <div id="fights"></div>
   </div>
 <script>
+document.addEventListener('DOMContentLoaded',()=>{
 const startInput=document.getElementById('start');
 const endInput=document.getElementById('end');
 const startLabel=document.getElementById('startLabel');
@@ -263,6 +264,7 @@ deleteBtn.addEventListener('click',async ()=>{
   await fetch(`/api/instances/${id}`,{method:'DELETE'});
   backBtn.click();
   loadInstances();
+});
 });
 </script>
 <div class="modal" id="createInstanceModal" tabindex="-1">
