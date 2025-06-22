@@ -7,13 +7,13 @@ public static class InstanceParser
     public static InstanceEntity? ToInstanceEntity(DateTime timestamp, string raw)
     {
         var parts = raw.Split("[$]");
-        if (parts.Length < 2)
+        if (parts.Length < 5)
             throw new ArgumentException("Invalid instance packet");
 
         if (parts.Length >= 8 && string.IsNullOrWhiteSpace(parts[7]))
             return null; // Non-boss instance
 
-        if (!long.TryParse(parts[0], out long id))
+        if (!long.TryParse(parts[4], out long id))
             throw new ArgumentException("Invalid instance id");
 
         string name = parts[1].Trim('[', ']');
