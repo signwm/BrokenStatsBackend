@@ -262,6 +262,61 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
         return Ok();
     }
 
+    [HttpPost("{id}/close")]
+    public async Task<IActionResult> CloseInstance(int id)
+    {
+        var instance = await _db.Instances.FindAsync(id);
+        if (instance == null) return NotFound();
+        if (instance.EndTime == null)
+        {
+            instance.EndTime = DateTime.UtcNow;
+            await _db.SaveChangesAsync();
+        }
+        return Ok();
+    }
+
+    [HttpGet("range")]
+    public async Task<IActionResult> GetInstancesInRange(DateTime from, DateTime to)
+    {
+        var instances = await _db.Instances
+            .Where(i => i.StartTime >= from && i.StartTime <= to)
+            .OrderBy(i => i.StartTime)
+            .ToListAsync();
+
+        var ids = instances.Select(i => i.Id).ToList();
+
+        var fights = await _db.Fights
+            .Where(f => f.InstanceId != null && ids.Contains(f.InstanceId.Value))
+            .Include(f => f.Drops)
+                .ThenInclude(d => d.DropItem)
+                    .ThenInclude(di => di.DropType)
+            .ToListAsync();
+
+        var result = instances.Select(i =>
+        {
+            var f = fights.Where(x => x.InstanceId == i.Id).ToList();
+            int gold = f.Sum(x => x.Gold);
+            int exp = f.Sum(x => x.Exp);
+            int psycho = f.Sum(x => x.Psycho);
+            int drop = f.SelectMany(x => x.Drops).Sum(d => FightsController.GetDropValueStatic(d));
+            return new
+            {
+                id = i.Id,
+                startTime = i.StartTime,
+                name = i.Name,
+                difficulty = i.Difficulty,
+                gold,
+                exp,
+                psycho,
+                profit = gold + drop,
+                fights = f.Count,
+                durationSeconds = i.EndTime != null ? (int?)(i.EndTime.Value - i.StartTime).TotalSeconds : null
+            };
+        }).ToList();
+
+        return Ok(result);
+    }
+
     private static int DropTypeOrder(string type) => type.ToLower() switch
     {
         "rare" => 0,
