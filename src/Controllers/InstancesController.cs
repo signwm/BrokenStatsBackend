@@ -174,6 +174,7 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
             .Join(fightTotals, i => i.Id, f => f.InstanceId, (i, f) => new
             {
                 i.Name,
+                i.Difficulty,
                 Duration = (i.EndTime!.Value - i.StartTime).TotalSeconds,
                 f.Gold,
                 f.Exp,
@@ -182,10 +183,11 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
             .ToList();
 
         var stats = perRun
-            .GroupBy(p => p.Name)
+            .GroupBy(p => new { p.Name, p.Difficulty })
             .Select(g => new
             {
-                name = g.Key,
+                name = g.Key.Name,
+                difficulty = g.Key.Difficulty,
                 count = g.Count(),
                 avgTime = TimeSpan.FromSeconds(g.Average(x => x.Duration)).ToString(@"hh\:mm\:ss"),
                 avgGold = (int)g.Average(x => x.Gold),
@@ -193,6 +195,7 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
                 avgPsycho = (int)g.Average(x => x.Psycho)
             })
             .OrderBy(s => s.name)
+            .ThenBy(s => s.difficulty)
             .ToList();
 
         return Ok(stats);
