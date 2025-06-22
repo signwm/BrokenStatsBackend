@@ -13,7 +13,7 @@
             <section id="summary" class="mb-3"></section>
             <div class="button-row mb-3">
                 <button id="clearSelection" class="btn btn-secondary">Odznacz wszystko</button>
-                <button id="newInstanceBtn" class="btn btn-primary">Utwórz instancję</button>
+                <button id="newInstanceBtn" class="btn btn-primary" style="display:none;">Utwórz instancję</button>
                 <button id="toggleSummary" class="btn btn-secondary">Ukryj podsumowanie</button>
             </div>
         </div>
@@ -76,6 +76,12 @@ const instanceDay = {};
 let lastClickedIndex = null;
 let loadToken = 0;
 
+function updateCreateButtonVisibility(){
+    const btn=document.getElementById('newInstanceBtn');
+    if(!btn) return;
+    btn.style.display = viewedInstance==='none' ? '' : 'none';
+}
+
 function getNoneFightsForDay(date){
     const all = instanceFights['none'] || [];
     return all.filter(f=>{
@@ -103,6 +109,7 @@ async function loadDays(){
     await initializeSelections();
     renderDayList(days);
     loadInstances();
+    updateCreateButtonVisibility();
 }
 
 async function initializeSelections(){
@@ -195,6 +202,7 @@ function renderInstanceList(list){
     });
     localStorage.setItem('selectedInstance',viewedInstance);
     loadFights();
+    updateCreateButtonVisibility();
 }
 
 async function loadInstanceFights(id, force=false){
