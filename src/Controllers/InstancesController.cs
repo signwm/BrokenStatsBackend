@@ -1,5 +1,6 @@
 using BrokenStatsBackend.src.Database;
 using BrokenStatsBackend.src.Models;
+using BrokenStatsBackend.src.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -159,16 +160,25 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
             .Where(i => i.EndTime != null)
             .ToListAsync();
 
-        var fightTotals = await _db.Fights
+        var fightsWithDrops = await _db.Fights
             .Where(f => f.InstanceId != null)
-            .GroupBy(f => f.InstanceId)
+            .Include(f => f.Drops)
+                .ThenInclude(d => d.DropItem)
+                    .ThenInclude(di => di.DropType)
+            .ToListAsync();
+
+        var fightTotals = fightsWithDrops
+            .GroupBy(f => f.InstanceId!.Value)
             .Select(g => new
             {
-                InstanceId = g.Key!.Value,
+                InstanceId = g.Key,
                 Gold = g.Sum(f => f.Gold),
                 Exp = g.Sum(f => f.Exp),
-                Psycho = g.Sum(f => f.Psycho)
-            }).ToListAsync();
+                Psycho = g.Sum(f => f.Psycho),
+                DropValue = g.SelectMany(f => f.Drops)
+                    .Sum(d => FightsController.GetDropValueStatic(d))
+            })
+            .ToList();
 
         var perRun = finishedInstances
             .Join(fightTotals, i => i.Id, f => f.InstanceId, (i, f) => new
@@ -178,7 +188,8 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
                 Duration = (i.EndTime!.Value - i.StartTime).TotalSeconds,
                 f.Gold,
                 f.Exp,
-                f.Psycho
+                f.Psycho,
+                f.DropValue
             })
             .ToList();
 
@@ -192,7 +203,8 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
                 avgTime = TimeSpan.FromSeconds(g.Average(x => x.Duration)).ToString(@"hh\:mm\:ss"),
                 avgGold = (int)g.Average(x => x.Gold),
                 avgExp = (int)g.Average(x => x.Exp),
-                avgPsycho = (int)g.Average(x => x.Psycho)
+                avgPsycho = (int)g.Average(x => x.Psycho),
+                avgProfit = (int)g.Average(x => x.Gold + x.DropValue)
             })
             .OrderBy(s => s.name)
             .ThenBy(s => s.difficulty)
@@ -240,6 +252,14 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
             return StatusCode(500, new { error = ex.Message, stack = ex.StackTrace });
         }
 
+    }
+
+    [HttpPost("closeLast")]
+    public async Task<IActionResult> CloseLastInstance()
+    {
+        var repo = new InstanceRepository(_db);
+        await repo.SetLastInstanceEndTimeAsync(DateTime.UtcNow);
+        return Ok();
     }
 
     private static int DropTypeOrder(string type) => type.ToLower() switch
