@@ -1,6 +1,6 @@
 # Frontend
 
-This folder contains a very small web page used to view data from the backend.
+This folder contains a single dashboard used to view data from the backend.
 
 ## Running
 
@@ -11,4 +11,4 @@ This folder contains a very small web page used to view data from the backend.
    The API listens on `http://localhost:5005`.
 
 2. Open a browser and navigate to `http://localhost:5005/`.
-   The page lists fights grouped by instances and fetches data from the backend automatically.
+   The dashboard will load and fetch data from the backend automatically.

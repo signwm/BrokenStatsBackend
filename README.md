@@ -11,6 +11,7 @@ dotnet run
 ```
 
 It listens on `http://localhost:5005`.
+Open that URL in a browser to view the dashboard.
 
 ## Environment
 
