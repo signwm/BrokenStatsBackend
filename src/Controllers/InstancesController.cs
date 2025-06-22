@@ -152,6 +152,52 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
         return Ok(result);
     }
 
+    [HttpGet("stats")]
+    public async Task<IActionResult> GetInstanceStats()
+    {
+        var finishedInstances = await _db.Instances
+            .Where(i => i.EndTime != null)
+            .ToListAsync();
+
+        var fightTotals = await _db.Fights
+            .Where(f => f.InstanceId != null)
+            .GroupBy(f => f.InstanceId)
+            .Select(g => new
+            {
+                InstanceId = g.Key!.Value,
+                Gold = g.Sum(f => f.Gold),
+                Exp = g.Sum(f => f.Exp),
+                Psycho = g.Sum(f => f.Psycho)
+            }).ToListAsync();
+
+        var perRun = finishedInstances
+            .Join(fightTotals, i => i.Id, f => f.InstanceId, (i, f) => new
+            {
+                i.Name,
+                Duration = (i.EndTime!.Value - i.StartTime).TotalSeconds,
+                f.Gold,
+                f.Exp,
+                f.Psycho
+            })
+            .ToList();
+
+        var stats = perRun
+            .GroupBy(p => p.Name)
+            .Select(g => new
+            {
+                name = g.Key,
+                count = g.Count(),
+                avgTime = TimeSpan.FromSeconds(g.Average(x => x.Duration)).ToString("hh\:mm\:ss"),
+                avgGold = (int)g.Average(x => x.Gold),
+                avgExp = (int)g.Average(x => x.Exp),
+                avgPsycho = (int)g.Average(x => x.Psycho)
+            })
+            .OrderBy(s => s.name)
+            .ToList();
+
+        return Ok(stats);
+    }
+
     [HttpPost]
     public async Task<IActionResult> CreateInstance([FromBody] CreateInstanceDto dto)
     {
