@@ -54,8 +54,8 @@ app.UseCors();
 var frontendPath = Path.Combine(builder.Environment.ContentRootPath, "frontend");
 app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = new PhysicalFileProvider(frontendPath) });
 app.UseStaticFiles(new StaticFileOptions { FileProvider = new PhysicalFileProvider(frontendPath) });
-app.MapGet("/fights", () => Results.File(Path.Combine(frontendPath, "index.html"), "text/html"));
-app.MapGet("/instances", () => Results.File(Path.Combine(frontendPath, "instances.html"), "text/html"));
+// Serve the main page at / and /instances
+app.MapGet("/instances", () => Results.File(Path.Combine(frontendPath, "index.html"), "text/html"));
 app.MapControllers();
 
 var scopeFactory = app.Services.GetRequiredService<IServiceScopeFactory>();
