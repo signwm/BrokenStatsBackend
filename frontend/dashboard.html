@@ -235,7 +235,7 @@ function openCreateInstanceModal(){
     return;
   }
   const times=Array.from(selectedNone).map(id=>{const f=fightCache['none'].find(x=>x.id===id);return new Date(f.time);});
-  const start=new Date(Math.min(...times));
+  const start=new Date(Math.min(...times)-15000);
   const end=new Date(Math.max(...times));
   document.getElementById('instanceStart').value=start.toISOString().slice(0,16);
   document.getElementById('instanceEnd').value=end.toISOString().slice(0,16);
@@ -257,8 +257,8 @@ document.getElementById('confirmCreateInstance').addEventListener('click',async 
     return;
   }
   document.getElementById('createInstanceModal').classList.remove('show');
-  backBtn.click();
-  loadInstances();
+  await loadInstances();
+  showDetails('none');
 });
 document.getElementById('closeCreateInstanceModal').addEventListener('click',()=>{
   document.getElementById('createInstanceModal').classList.remove('show');
