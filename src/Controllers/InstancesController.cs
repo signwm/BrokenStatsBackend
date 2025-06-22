@@ -271,7 +271,7 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
     public async Task<IActionResult> CloseLastInstance()
     {
         var repo = new InstanceRepository(_db);
-        await repo.SetLastInstanceEndTimeAsync(DateTime.UtcNow);
+        await repo.SetLastInstanceEndTimeAsync(DateTime.Now);
         return Ok();
     }
 
@@ -282,7 +282,7 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
         if (instance == null) return NotFound();
         if (instance.EndTime == null)
         {
-            instance.EndTime = DateTime.UtcNow;
+            instance.EndTime = DateTime.Now;
             await _db.SaveChangesAsync();
         }
         return Ok();
