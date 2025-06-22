@@ -1,0 +1,151 @@
+body {
+  background-color: #111;
+  color: #eee;
+  font-family: 'Segoe UI', sans-serif;
+  padding: 20px;
+  font-size: 12px;
+  display: flex;
+  justify-content: center;
+}
+
+.summary-widget {
+  max-width: 1000px;
+  width: 100%;
+}
+
+h1 {
+  font-size: 20px;
+  margin-bottom: 16px;
+  color: #fff;
+  text-align: center;
+}
+
+.stats-row {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 24px;
+}
+
+.stats-row .card {
+  background-color: #1b1b1b;
+  border-radius: 6px;
+  padding: 10px;
+  flex: 1 1 0;
+  min-width: 100px;
+  text-align: center;
+}
+
+.stats-row .card h3 {
+  font-size: 13px;
+  margin-bottom: 4px;
+  color: #ccc;
+  border-bottom: 1px solid #333;
+  padding-bottom: 2px;
+}
+
+.stats-row .value {
+  font-size: 14px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.drops-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.card {
+  background-color: #1b1b1b;
+  padding: 10px;
+  border-radius: 6px;
+}
+
+.card h3 {
+  font-size: 13px;
+  color: #ccc;
+  margin: 0 0 8px;
+  border-bottom: 1px solid #333;
+  padding-bottom: 4px;
+}
+
+.line-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 2px 0;
+  border-bottom: 1px dotted #333;
+}
+
+.line-item:last-child {
+  border-bottom: none;
+}
+
+.label {
+  color: #eee;
+}
+
+.value {
+  color: #aaa;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.total-value {
+  font-weight: bold;
+  margin-top: 6px;
+  text-align: right;
+  color: #fff;
+}
+
+body {
+  background-color: #111;
+  color: #eee;
+  font-family: 'Segoe UI', sans-serif;
+  padding: 20px;
+  font-size: 13px;
+  display: flex;
+  justify-content: center;
+}
+
+.instance-stats-widget {
+  max-width: 1000px;
+  width: 100%;
+}
+
+h1 {
+  font-size: 20px;
+  margin-bottom: 16px;
+  color: #fff;
+  text-align: center;
+}
+
+.instance-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: #1b1b1b;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.instance-table th,
+.instance-table td {
+  padding: 10px;
+  text-align: left;
+  border-bottom: 1px solid #333;
+}
+
+.instance-table th {
+  background-color: #222;
+  color: #ccc;
+  font-weight: bold;
+}
+
+.instance-table td {
+  color: #eee;
+}
+
+.instance-table tr:last-child td {
+  border-bottom: none;
+}
