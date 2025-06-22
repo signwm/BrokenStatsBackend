@@ -187,7 +187,7 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
             {
                 name = g.Key,
                 count = g.Count(),
-                avgTime = TimeSpan.FromSeconds(g.Average(x => x.Duration)).ToString("hh\:mm\:ss"),
+                avgTime = TimeSpan.FromSeconds(g.Average(x => x.Duration)).ToString(@"hh\:mm\:ss"),
                 avgGold = (int)g.Average(x => x.Gold),
                 avgExp = (int)g.Average(x => x.Exp),
                 avgPsycho = (int)g.Average(x => x.Psycho)
