@@ -185,13 +185,14 @@ async function loadStats(){
   const stats=await res.json();
   const tbody=document.createElement('tbody');
   stats.forEach(r=>{
+    const diffChar=r.difficulty===2?'Ł':r.difficulty===1?'N':'T';
     const tr=document.createElement('tr');
-    tr.innerHTML=`<td>${r.name}</td><td>${r.count}</td><td>${r.avgTime}</td><td>${formatNumber(r.avgGold)}</td><td>${formatNumber(r.avgExp)}</td><td>${formatNumber(r.avgPsycho)}</td>`;
+    tr.innerHTML=`<td>${r.name}</td><td>${diffChar}</td><td>${r.count}</td><td>${r.avgTime}</td><td>${formatNumber(r.avgGold)}</td><td>${formatNumber(r.avgExp)}</td><td>${formatNumber(r.avgPsycho)}</td>`;
     tbody.appendChild(tr);
   });
   const table=document.createElement('table');
   table.className='instance-table';
-  table.innerHTML=`<thead><tr><th>Instancja</th><th>Ilość</th><th>Śr. czas</th><th>Śr. złoto</th><th>Śr. exp</th><th>Śr. psycho</th></tr></thead>`;
+  table.innerHTML=`<thead><tr><th>Instancja</th><th>Poziom</th><th>Ilość</th><th>Śr. czas</th><th>Śr. złoto</th><th>Śr. exp</th><th>Śr. psycho</th></tr></thead>`;
   table.appendChild(tbody);
   document.getElementById('instanceStats').innerHTML='';
   document.getElementById('instanceStats').appendChild(table);
