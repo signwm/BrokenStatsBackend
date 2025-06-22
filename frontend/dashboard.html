@@ -158,7 +158,9 @@ async function updateSummary(){
   const res=await fetch('/api/fights/summary',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Array.from(selectedIds))});
   const s=await res.json();
   const card=(title,val)=>`<div class="card"><h3>${title}</h3><div class="value">${val}</div></div>`;
-  const drops=list=>list.map(d=>`<div class="line-item"><span class="label">${d.name}</span><span class="value">${d.count}</span></div>`).join('');
+  const drops=list=>list.map(d=>`<div class="line-item"><span class="label">${d.name}</span><span class="value">${formatNumber(d.count)}</span></div>`).join('');
+  const dropVals={};Object.entries(s.dropValuesPerType).forEach(([k,v])=>dropVals[k.toLowerCase()]=v);
+  const dropCard=(title,list,val)=>`<div class="card"><h3>${title}</h3>${drops(list)}<div class="total-value">= ${formatNumber(val)}</div></div>`;
   container.innerHTML=`
     <div class="stats-row">
       ${card('Exp',formatNumber(s.totalExp))}
@@ -167,6 +169,14 @@ async function updateSummary(){
       ${card('Zarobek',formatNumber(s.totalGoldWithDrops))}
       ${card('Walki',formatNumber(s.fightsCount))}
       ${card('Czas sesji',formatMMSS(Math.floor((new Date(s.sessionEnd)-new Date(s.sessionStart))/1000)))}
+    </div>
+    <div class="drops-grid">
+      ${dropCard('Rary',s.rare,dropVals['rare']||0)}
+      ${dropCard('Użytkowe',s.items,dropVals['item']||0)}
+      ${dropCard('Białe',s.trash,dropVals['trash']||0)}
+      ${dropCard('Syngi',s.synergetics,dropVals['synergetic']||0)}
+      ${dropCard('Drify',s.drifs,dropVals['drif']||0)}
+      ${dropCard('Orby',[],0)}
     </div>`;
 }
 
