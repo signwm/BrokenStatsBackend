@@ -47,6 +47,37 @@ const fightCache={};
 let selectedNone=new Set();
 let currentInstanceId=null;
 
+function updateNoneSelection(cb){
+  if(cb.checked){
+    selectedNone.add(cb.dataset.id);
+    cb.closest('tr').classList.add('selected');
+  }else{
+    selectedNone.delete(cb.dataset.id);
+    cb.closest('tr').classList.remove('selected');
+  }
+}
+
+function enableDragSelection(tbody){
+  let dragging=false;
+  let dragState=false;
+  tbody.addEventListener('mousedown',e=>{
+    if(e.target.type==='checkbox'){
+      e.preventDefault();
+      dragging=true;
+      dragState=!e.target.checked;
+      e.target.checked=dragState;
+      updateNoneSelection(e.target);
+    }
+  });
+  tbody.addEventListener('mouseover',e=>{
+    if(dragging&&e.target.type==='checkbox'){
+      e.target.checked=dragState;
+      updateNoneSelection(e.target);
+    }
+  });
+  document.addEventListener('mouseup',()=>{dragging=false;});
+}
+
 function updateHeaderButtons(){
   if(currentInstanceId==='none'){
     createBtn.style.display='inline-block';
@@ -163,7 +194,9 @@ function showDetails(id){
     fightsDiv.appendChild(table);
     if(id==='none'){
       selectedNone=new Set();
-      tbody.querySelectorAll('input[type="checkbox"]').forEach(cb=>cb.addEventListener('change',()=>{if(cb.checked)selectedNone.add(cb.dataset.id);else selectedNone.delete(cb.dataset.id);}));
+      const cbs=tbody.querySelectorAll('input[type="checkbox"]');
+      cbs.forEach(cb=>cb.addEventListener('change',()=>updateNoneSelection(cb)));
+      enableDragSelection(tbody);
     }
     instancesDiv.style.display='none';
     detailsDiv.style.display='block';
@@ -277,38 +310,34 @@ deleteBtn.addEventListener('click',async ()=>{
 });
 </script>
 <div class="modal" id="createInstanceModal" tabindex="-1">
-  <div class="modal-dialog">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h5 class="modal-title">Utwórz instancję</h5>
-        <button type="button" id="closeCreateInstanceModal" class="btn-close" aria-label="Close"></button>
+  <div class="form-card">
+    <button type="button" id="closeCreateInstanceModal" class="btn-close" aria-label="Close" style="align-self:flex-end;"></button>
+    <h2 class="form-title">Utwórz instancję</h2>
+    <div class="form-group">
+      <label class="form-label" for="instanceName">Nazwa</label>
+      <input type="text" id="instanceName" class="form-control" placeholder="Np. Hvar, Torisa...">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="instanceDifficulty">Poziom trudności</label>
+      <select id="instanceDifficulty" class="form-select">
+        <option value="1">Normalny</option>
+        <option value="2">Łatwy</option>
+        <option value="3">Trudny</option>
+      </select>
+    </div>
+    <div class="datetime-row">
+      <div class="form-group">
+        <label class="form-label" for="instanceStart">Start</label>
+        <input type="datetime-local" id="instanceStart" class="form-control">
       </div>
-      <div class="modal-body">
-        <div class="mb-3">
-          <label class="form-label">Nazwa</label>
-          <input type="text" id="instanceName" class="form-control">
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Poziom trudności</label>
-          <select id="instanceDifficulty" class="form-select">
-            <option value="1">Normalny</option>
-            <option value="2">Łatwy</option>
-            <option value="3">Trudny</option>
-          </select>
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Start</label>
-          <input type="datetime-local" id="instanceStart" class="form-control">
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Koniec</label>
-          <input type="datetime-local" id="instanceEnd" class="form-control">
-        </div>
+      <div class="form-group">
+        <label class="form-label" for="instanceEnd">Koniec</label>
+        <input type="datetime-local" id="instanceEnd" class="form-control">
       </div>
-      <div class="modal-footer">
-        <button type="button" id="cancelCreateInstance" class="btn btn-secondary">Anuluj</button>
-        <button type="button" id="confirmCreateInstance" class="btn btn-primary">Utwórz</button>
-      </div>
+    </div>
+    <div class="button-row" style="margin-top: 16px;">
+      <button type="button" id="confirmCreateInstance" class="btn btn-primary">Zapisz</button>
+      <button type="button" id="cancelCreateInstance" class="btn btn-secondary">Anuluj</button>
     </div>
   </div>
 </div>
