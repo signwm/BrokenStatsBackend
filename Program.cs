@@ -126,7 +126,7 @@ Task task = Task.Run(() =>
             }
             var last = await repo.GetLastInstanceAsync();
 
-            if (last != null && last.EndTime == null && last.Name == instance.Name)
+            if (last != null && last.InstanceId == instance.InstanceId)
             {
                 return;
             }
