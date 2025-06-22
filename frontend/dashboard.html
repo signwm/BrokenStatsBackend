@@ -6,7 +6,7 @@
   <link rel="stylesheet" href="style.css">
   <style>
     body{display:flex;flex-direction:column;align-items:center;gap:20px;}
-    .controls{display:flex;gap:10px;margin-bottom:10px;}
+    .controls{display:flex;gap:10px;margin-bottom:10px;justify-content:center;align-items:center;}
     .sticky-controls{position:sticky;top:0;z-index:100;background-color:#121212;padding:10px;width:100%;}
     #details{width:100%;}
   </style>
@@ -15,6 +15,7 @@
   <div class="controls sticky-controls">
     <label id="startLabel">Start: <input type="datetime-local" id="start"></label>
     <label id="endLabel">Koniec: <input type="datetime-local" id="end"></label>
+    <button id="todayBtn" class="back-button">Dzsiiaj</button>
     <button id="backBtn" class="back-button" style="display:none;">Powrót</button>
     <button id="createBtn" class="end-button" style="display:none;">Stwórz instancję</button>
     <button id="deleteBtn" class="end-button" style="display:none;">Usuń instancję</button>
@@ -30,6 +31,7 @@ const startInput=document.getElementById('start');
 const endInput=document.getElementById('end');
 const startLabel=document.getElementById('startLabel');
 const endLabel=document.getElementById('endLabel');
+const todayBtn=document.getElementById('todayBtn');
 const backBtn=document.getElementById('backBtn');
 const createBtn=document.getElementById('createBtn');
 const deleteBtn=document.getElementById('deleteBtn');
@@ -73,7 +75,14 @@ async function loadFights(id){
   const res=await fetch(`/api/instances/${id}/fights`);const data=await res.json();fightCache[id]=data;return data;
 }
 async function updateListSummary(){
-  if(selectedInstances.size===0){listSummary.innerHTML='<div class="no-fights-card"><p class="no-fights-text">Nic nie zaznaczono.</p></div>';return;}
+  if(selectedInstances.size===0){
+    if(detailsDiv.style.display==='block'){
+      listSummary.innerHTML='';
+    } else {
+      listSummary.innerHTML='<div class="no-fights-card"><p class="no-fights-text">Nic nie zaznaczono.</p></div>';
+    }
+    return;
+  }
   const ids=[];
   for(const id of selectedInstances){const fights=await loadFights(id);ids.push(...fights.map(f=>f.id));}
   const res=await fetch('/api/fights/summary',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(ids)});const s=await res.json();
@@ -106,7 +115,7 @@ async function showInstances(list, noneFights){
   }
   list.forEach(inst=>{
     instanceStarts[inst.id]=inst.startTime;
-    const diff=inst.difficulty===2?'Ł':inst.difficulty===1?'N':'T';
+    const diff=inst.difficulty===3?'Trudna':inst.difficulty===1?'Normalna':'Łatwa';
     const tr=document.createElement('tr');
     const dur=inst.durationSeconds!=null?formatDuration(inst.durationSeconds):`<button data-id="${inst.id}" class="close end-button">zakończ instancję</button>`;
     tr.innerHTML=`<td><input type="checkbox" data-id="${inst.id}"></td><td>${formatDate(new Date(inst.startTime))}</td><td>${inst.name}</td><td>${diff}</td><td>${inst.gold.toLocaleString()}</td><td>${inst.exp.toLocaleString()}</td><td>${inst.psycho.toLocaleString()}</td><td>${inst.profit.toLocaleString()}</td><td>${inst.fights}</td><td>${dur}</td>`;
@@ -176,6 +185,14 @@ backBtn.addEventListener('click',()=>{
 });
 const now=new Date();endInput.value=now.toISOString().slice(0,16);const start=new Date(now.getTime()-3600000);startInput.value=start.toISOString().slice(0,16);startInput.addEventListener('change',loadInstances);endInput.addEventListener('change',loadInstances);loadInstances();
 updateHeaderButtons();
+todayBtn.addEventListener('click',()=>{
+  const now=new Date();
+  const start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),0,0,0);
+  const end=new Date(now.getFullYear(),now.getMonth(),now.getDate(),23,59,59);
+  startInput.value=start.toISOString().slice(0,16);
+  endInput.value=end.toISOString().slice(0,16);
+  loadInstances();
+});
 
 function openCreateInstanceModal(){
   if(selectedNone.size===0)return;

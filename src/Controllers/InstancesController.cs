@@ -54,7 +54,7 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
         DateTime next = day.AddDays(1);
         var list = await _db.Instances
             .Where(i => i.StartTime >= day && i.StartTime < next)
-            .OrderBy(i => i.StartTime)
+            .OrderByDescending(i => i.StartTime)
             .Select(i => new
             {
                 id = i.Id,
@@ -75,7 +75,7 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
             .Include(f => f.Opponents).ThenInclude(o => o.OpponentType)
             .Include(f => f.Drops).ThenInclude(d => d.DropItem).ThenInclude(di => di.DropType)
             .Where(f => f.InstanceId == id)
-            .OrderBy(f => f.Time)
+            .OrderByDescending(f => f.Time)
             .ToListAsync();
         var result = fights.Select(f => new InstanceFightDto
         {
@@ -126,7 +126,7 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
             query = query.Where(f => f.Time <= to.Value);
 
         var fights = await query
-            .OrderBy(f => f.Time)
+            .OrderByDescending(f => f.Time)
             .ToListAsync();
         var result = fights.Select(f => new FightFlatDto
         {
@@ -306,7 +306,7 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
     {
         var instances = await _db.Instances
             .Where(i => i.StartTime >= from && i.StartTime <= to)
-            .OrderBy(i => i.StartTime)
+            .OrderByDescending(i => i.StartTime)
             .ToListAsync();
 
         var ids = instances.Select(i => i.Id).ToList();
