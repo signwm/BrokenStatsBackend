@@ -16,6 +16,8 @@
     <label id="startLabel">Start: <input type="datetime-local" id="start"></label>
     <label id="endLabel">Koniec: <input type="datetime-local" id="end"></label>
     <button id="backBtn" class="back-button" style="display:none;">Powrót</button>
+    <button id="createBtn" class="end-button" style="display:none;">Stwórz instancję</button>
+    <button id="deleteBtn" class="end-button" style="display:none;">Usuń instancję</button>
   </div>
   <div id="listSummary" class="summary-widget"></div>
   <div id="instances"></div>
@@ -29,6 +31,8 @@ const endInput=document.getElementById('end');
 const startLabel=document.getElementById('startLabel');
 const endLabel=document.getElementById('endLabel');
 const backBtn=document.getElementById('backBtn');
+const createBtn=document.getElementById('createBtn');
+const deleteBtn=document.getElementById('deleteBtn');
 const instancesDiv=document.getElementById('instances');
 const detailsDiv=document.getElementById('details');
 const summaryDiv=document.getElementById('detailSummary');
@@ -38,6 +42,21 @@ let instanceStarts={};
 const selectedInstances=new Set();
 const fightCache={};
 let selectedNone=new Set();
+let currentInstanceId=null;
+
+function updateHeaderButtons(){
+  if(currentInstanceId==='none'){
+    createBtn.style.display='inline-block';
+    deleteBtn.style.display='none';
+  } else if(currentInstanceId){
+    createBtn.style.display='none';
+    deleteBtn.style.display='inline-block';
+    deleteBtn.dataset.id=currentInstanceId;
+  } else {
+    createBtn.style.display='none';
+    deleteBtn.style.display='none';
+  }
+}
 function pad(n){return n.toString().padStart(2,'0');}
 function formatDate(dt){return `${pad(dt.getDate())}.${pad(dt.getMonth()+1)} ${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`;}
 function formatTime(dt){return `${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`;}
@@ -129,23 +148,14 @@ function showDetails(id){
     if(id==='none'){
       selectedNone=new Set();
       tbody.querySelectorAll('input[type="checkbox"]').forEach(cb=>cb.addEventListener('change',()=>{if(cb.checked)selectedNone.add(cb.dataset.id);else selectedNone.delete(cb.dataset.id);}));
-      const btn=document.createElement('button');
-      btn.textContent='Stwórz instancję';
-      btn.className='end-button';
-      btn.addEventListener('click',openCreateInstanceModal);
-      fightsDiv.appendChild(btn);
-    } else {
-      const del=document.createElement('button');
-      del.textContent='Usuń instancję';
-      del.className='end-button';
-      del.addEventListener('click',async ()=>{await fetch(`/api/instances/${id}`,{method:'DELETE'});backBtn.click();loadInstances();});
-      fightsDiv.appendChild(del);
     }
     instancesDiv.style.display='none';
     detailsDiv.style.display='block';
     startLabel.style.display='none';
     endLabel.style.display='none';
     backBtn.style.display='inline-block';
+    currentInstanceId=id;
+    updateHeaderButtons();
   });
 }
 function renderSummaryTo(el,s){
@@ -161,8 +171,11 @@ backBtn.addEventListener('click',()=>{
   startLabel.style.display='inline-block';
   endLabel.style.display='inline-block';
   backBtn.style.display='none';
+  currentInstanceId=null;
+  updateHeaderButtons();
 });
 const now=new Date();endInput.value=now.toISOString().slice(0,16);const start=new Date(now.getTime()-3600000);startInput.value=start.toISOString().slice(0,16);startInput.addEventListener('change',loadInstances);endInput.addEventListener('change',loadInstances);loadInstances();
+updateHeaderButtons();
 
 function openCreateInstanceModal(){
   if(selectedNone.size===0)return;
@@ -180,6 +193,14 @@ document.getElementById('confirmCreateInstance').addEventListener('click',async 
   const end=document.getElementById('instanceEnd').value;
   await fetch('/api/instances',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,difficulty,startTime:start,endTime:end,fightIds:Array.from(selectedNone)})});
   bootstrap.Modal.getInstance(document.getElementById('createInstanceModal')).hide();
+  backBtn.click();
+  loadInstances();
+});
+createBtn.addEventListener('click',openCreateInstanceModal);
+deleteBtn.addEventListener('click',async ()=>{
+  const id=deleteBtn.dataset.id;
+  if(!id) return;
+  await fetch(`/api/instances/${id}`,{method:'DELETE'});
   backBtn.click();
   loadInstances();
 });
