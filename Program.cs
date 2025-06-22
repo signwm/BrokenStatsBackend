@@ -52,11 +52,13 @@ app.Map("/error", () => Results.Problem("An error occurred."));
 
 app.UseCors();
 var frontendPath = Path.Combine(builder.Environment.ContentRootPath, "frontend");
-app.UseDefaultFiles(new DefaultFilesOptions { FileProvider = new PhysicalFileProvider(frontendPath) });
+app.UseDefaultFiles(new DefaultFilesOptions
+{
+    FileProvider = new PhysicalFileProvider(frontendPath),
+    DefaultFileNames = new List<string> { "dashboard.html" }
+});
 app.UseStaticFiles(new StaticFileOptions { FileProvider = new PhysicalFileProvider(frontendPath) });
-// Serve the main page at / and /instances
-app.MapGet("/instances", () => Results.File(Path.Combine(frontendPath, "index.html"), "text/html"));
-app.MapGet("/session", () => Results.File(Path.Combine(frontendPath, "session.html"), "text/html"));
+// Serve dashboard also under /dashboard for backwards compatibility
 app.MapGet("/dashboard", () => Results.File(Path.Combine(frontendPath, "dashboard.html"), "text/html"));
 app.MapControllers();
 
