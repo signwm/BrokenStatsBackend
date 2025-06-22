@@ -111,13 +111,22 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
     }
 
     [HttpGet("without/fights")]
-    public async Task<IActionResult> GetFightsWithoutInstance()
+    public async Task<IActionResult> GetFightsWithoutInstance(DateTime? from = null, DateTime? to = null)
     {
-        var fights = await _db.Fights
+        var query = _db.Fights
             .Include(f => f.Opponents).ThenInclude(o => o.OpponentType)
             .Include(f => f.Drops).ThenInclude(d => d.DropItem).ThenInclude(di => di.DropType)
             .Where(f => f.InstanceId == null)
-            .OrderByDescending(f => f.Time)
+            .AsQueryable();
+
+        if (from.HasValue)
+            query = query.Where(f => f.Time >= from.Value);
+
+        if (to.HasValue)
+            query = query.Where(f => f.Time <= to.Value);
+
+        var fights = await query
+            .OrderBy(f => f.Time)
             .ToListAsync();
         var result = fights.Select(f => new FightFlatDto
         {
@@ -222,8 +231,12 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
             .ToListAsync();
         if (fights.Count == 0) return BadRequest("No fights found");
 
-        DateTime start = fights.Min(f => f.Time).AddSeconds(-10);
-        DateTime end = fights.Max(f => f.Time);
+        DateTime start = dto.StartTime != default
+            ? dto.StartTime
+            : fights.Min(f => f.Time).AddSeconds(-10);
+        DateTime end = dto.EndTime != default
+            ? dto.EndTime
+            : fights.Max(f => f.Time);
 
         long nextId = (_db.Instances.Any()
             ? await _db.Instances.MaxAsync(i => i.InstanceId)
@@ -272,6 +285,19 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
             instance.EndTime = DateTime.UtcNow;
             await _db.SaveChangesAsync();
         }
+        return Ok();
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteInstance(int id)
+    {
+        var instance = await _db.Instances.FindAsync(id);
+        if (instance == null) return NotFound();
+
+        var fights = await _db.Fights.Where(f => f.InstanceId == id).ToListAsync();
+        fights.ForEach(f => f.InstanceId = null);
+        _db.Instances.Remove(instance);
+        await _db.SaveChangesAsync();
         return Ok();
     }
 
