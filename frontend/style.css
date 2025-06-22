@@ -31,8 +31,23 @@ h1 {
   color: #eee;
 }
 
+.form-select {
+  background-color: #2a2a2a;
+  border: 1px solid #444;
+  color: #eee;
+  padding: 6px;
+}
+
 
 /* Przyciski */
+.btn {
+  padding: 8px 16px;
+  font-size: 13px;
+  border-radius: 4px;
+  cursor: pointer;
+  text-align: center;
+}
+
 .btn-primary {
   background-color: #0066cc;
   border: none;
@@ -334,4 +349,60 @@ h1 {
 
 .end-button:hover {
   background-color: #e53935;
+}
+
+/* Simple modal styles */
+.modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: none;
+  background-color: rgba(0, 0, 0, 0.5);
+  align-items: center;
+  justify-content: center;
+}
+
+.modal.show {
+  display: flex;
+}
+
+.modal-dialog {
+  background-color: #1e1e1e;
+  border-radius: 8px;
+  max-width: 500px;
+  width: 100%;
+  color: #eee;
+}
+
+.modal-header,
+.modal-body,
+.modal-footer {
+  padding: 16px;
+}
+
+.modal-header,
+.modal-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #333;
+}
+
+.modal-footer {
+  border-top: 1px solid #333;
+}
+
+.modal-title {
+  margin: 0;
+  font-size: 18px;
+}
+
+.btn-close {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 24px;
+  cursor: pointer;
 }
