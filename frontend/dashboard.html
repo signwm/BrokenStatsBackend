@@ -99,6 +99,8 @@ async function loadInstances(){
   showInstances(inst, none);
 }
 async function showInstances(list, noneFights){
+  list.sort((a,b)=>new Date(b.startTime)-new Date(a.startTime));
+  noneFights.sort((a,b)=>new Date(b.time)-new Date(a.time));
   instancesDiv.innerHTML='';
   instanceStarts={};
   const table=document.createElement('table');
@@ -136,6 +138,10 @@ function showDetails(id){
   if(!start)return;
   const url=id==='none'?`/api/instances/without/fights?from=${encodeURIComponent(startInput.value)}&to=${encodeURIComponent(endInput.value)}`:`/api/instances/${id}/fights`;
   fetch(url).then(r=>r.json()).then(list=>{
+    list.sort((a,b)=>{
+      if(id==='none') return new Date(b.time)-new Date(a.time);
+      return b.offsetSeconds-a.offsetSeconds;
+    });
     const ids=list.map(f=>f.id);
     fetch('/api/fights/summary',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(ids)})
       .then(r=>r.json()).then(s=>renderSummaryTo(summaryDiv,s));
@@ -162,6 +168,7 @@ function showDetails(id){
     detailsDiv.style.display='block';
     startLabel.style.display='none';
     endLabel.style.display='none';
+    todayBtn.style.display='none';
     backBtn.style.display='inline-block';
     currentInstanceId=id;
     updateHeaderButtons();
@@ -179,6 +186,7 @@ backBtn.addEventListener('click',()=>{
   instancesDiv.style.display='block';
   startLabel.style.display='inline-block';
   endLabel.style.display='inline-block';
+  todayBtn.style.display='inline-block';
   backBtn.style.display='none';
   currentInstanceId=null;
   updateHeaderButtons();
@@ -195,7 +203,10 @@ todayBtn.addEventListener('click',()=>{
 });
 
 function openCreateInstanceModal(){
-  if(selectedNone.size===0)return;
+  if(selectedNone.size===0){
+    alert('Zaznacz walki do utworzenia instancji.');
+    return;
+  }
   const times=Array.from(selectedNone).map(id=>{const f=fightCache['none'].find(x=>x.id===id);return new Date(f.time);});
   const start=new Date(Math.min(...times));
   const end=new Date(Math.max(...times));
