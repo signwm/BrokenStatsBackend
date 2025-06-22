@@ -9,23 +9,25 @@
     body{display:flex;flex-direction:column;align-items:center;gap:20px;}
     .controls{display:flex;gap:10px;margin-bottom:10px;}
     #details{width:100%;}
-    .back-btn{margin-bottom:10px;}
   </style>
 </head>
 <body>
   <div class="controls">
-    <label>Start: <input type="datetime-local" id="start"></label>
-    <label>Koniec: <input type="datetime-local" id="end"></label>
+    <label id="startLabel">Start: <input type="datetime-local" id="start"></label>
+    <label id="endLabel">Koniec: <input type="datetime-local" id="end"></label>
+    <button id="backBtn" class="back-button" style="display:none;">Powrót</button>
   </div>
   <div id="instances"></div>
   <div id="details" style="display:none;">
-    <button id="backBtn" class="back-btn">Powrót</button>
     <div id="detailSummary" class="summary-widget"></div>
     <div id="fights"></div>
   </div>
 <script>
 const startInput=document.getElementById('start');
 const endInput=document.getElementById('end');
+const startLabel=document.getElementById('startLabel');
+const endLabel=document.getElementById('endLabel');
+const backBtn=document.getElementById('backBtn');
 const instancesDiv=document.getElementById('instances');
 const detailsDiv=document.getElementById('details');
 const summaryDiv=document.getElementById('detailSummary');
@@ -51,7 +53,7 @@ function showInstances(list){
     instanceStarts[inst.id]=inst.startTime;
     const diff=inst.difficulty===2?'Ł':inst.difficulty===1?'N':'T';
     const tr=document.createElement('tr');
-    const dur=inst.durationSeconds!=null?formatDuration(inst.durationSeconds):`<button data-id="${inst.id}" class="close">zakończ instancję</button>`;
+    const dur=inst.durationSeconds!=null?formatDuration(inst.durationSeconds):`<button data-id="${inst.id}" class="close end-button">zakończ instancję</button>`;
     tr.innerHTML=`<td>${formatDate(new Date(inst.startTime))}</td><td>${inst.name}</td><td>${diff}</td><td>${inst.gold.toLocaleString()}</td><td>${inst.exp.toLocaleString()}</td><td>${inst.psycho.toLocaleString()}</td><td>${inst.profit.toLocaleString()}</td><td>${inst.fights}</td><td>${dur}</td>`;
     tr.dataset.id=inst.id;
     tbody.appendChild(tr);
@@ -86,6 +88,9 @@ function showDetails(id){
     fightsDiv.appendChild(table);
     instancesDiv.style.display='none';
     detailsDiv.style.display='block';
+    startLabel.style.display='none';
+    endLabel.style.display='none';
+    backBtn.style.display='inline-block';
   });
 }
 function renderSummary(s){
@@ -95,7 +100,13 @@ function renderSummary(s){
   const dropCard=(t,l,v)=>`<div class="card"><h3>${t}</h3>${drops(l)}<div class="total-value">= ${v.toLocaleString()}</div></div>`;
   summaryDiv.innerHTML=`<div class="stats-row">${card('Exp',s.totalExp.toLocaleString())}${card('Psycho',s.totalPsycho.toLocaleString())}${card('Złoto',s.totalGold.toLocaleString())}${card('Zarobek',s.totalGoldWithDrops.toLocaleString())}${card('Walki',s.fightsCount.toLocaleString())}${card('Czas',formatDuration(Math.floor((new Date(s.sessionEnd)-new Date(s.sessionStart))/1000)))}</div><div class="drops-grid">${dropCard('Rary',s.rare,dropVals['rare']||0)}${dropCard('Użytkowe',s.items,dropVals['item']||0)}${dropCard('Białe',s.trash,dropVals['trash']||0)}${dropCard('Syngi',s.synergetics,dropVals['synergetic']||0)}${dropCard('Drify',s.drifs,dropVals['drif']||0)}${dropCard('Orby',[],0)}</div>`;
 }
-document.getElementById('backBtn').addEventListener('click',()=>{detailsDiv.style.display='none';instancesDiv.style.display='block';});
+backBtn.addEventListener('click',()=>{
+  detailsDiv.style.display='none';
+  instancesDiv.style.display='block';
+  startLabel.style.display='inline-block';
+  endLabel.style.display='inline-block';
+  backBtn.style.display='none';
+});
 const now=new Date();endInput.value=now.toISOString().slice(0,16);const start=new Date(now.getTime()-3600000);startInput.value=start.toISOString().slice(0,16);startInput.addEventListener('change',loadInstances);endInput.addEventListener('change',loadInstances);loadInstances();
 </script>
 </body>
