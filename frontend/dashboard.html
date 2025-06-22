@@ -27,6 +27,7 @@
     <div id="fights"></div>
   </div>
 <script>
+document.addEventListener('DOMContentLoaded',()=>{
 const startInput=document.getElementById('start');
 const endInput=document.getElementById('end');
 const startLabel=document.getElementById('startLabel');
@@ -245,7 +246,16 @@ document.getElementById('confirmCreateInstance').addEventListener('click',async 
   const difficulty=parseInt(document.getElementById('instanceDifficulty').value);
   const start=document.getElementById('instanceStart').value;
   const end=document.getElementById('instanceEnd').value;
-  await fetch('/api/instances',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,difficulty,startTime:start,endTime:end,fightIds:Array.from(selectedNone)})});
+  const res=await fetch('/api/instances',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name,difficulty,startTime:start,endTime:end,fightIds:Array.from(selectedNone)})
+  });
+  if(!res.ok){
+    const msg=await res.text();
+    alert(msg);
+    return;
+  }
   document.getElementById('createInstanceModal').classList.remove('show');
   backBtn.click();
   loadInstances();
@@ -263,6 +273,7 @@ deleteBtn.addEventListener('click',async ()=>{
   await fetch(`/api/instances/${id}`,{method:'DELETE'});
   backBtn.click();
   loadInstances();
+});
 });
 </script>
 <div class="modal" id="createInstanceModal" tabindex="-1">
