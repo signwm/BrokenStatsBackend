@@ -191,14 +191,40 @@ backBtn.addEventListener('click',()=>{
   currentInstanceId=null;
   updateHeaderButtons();
 });
-const now=new Date();endInput.value=now.toISOString().slice(0,16);const start=new Date(now.getTime()-3600000);startInput.value=start.toISOString().slice(0,16);startInput.addEventListener('change',loadInstances);endInput.addEventListener('change',loadInstances);loadInstances();
-updateHeaderButtons();
-todayBtn.addEventListener('click',()=>{
+function toInputValue(dt){
+  const off=dt.getTimezoneOffset();
+  return new Date(dt.getTime()-off*60000).toISOString().slice(0,16);
+}
+
+function setDefaultRange(){
   const now=new Date();
   const start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),0,0,0);
   const end=new Date(now.getFullYear(),now.getMonth(),now.getDate(),23,59,59);
-  startInput.value=start.toISOString().slice(0,16);
-  endInput.value=end.toISOString().slice(0,16);
+  startInput.value=toInputValue(start);
+  endInput.value=toInputValue(end);
+}
+
+const savedStart=localStorage.getItem('startTime');
+const savedEnd=localStorage.getItem('endTime');
+if(savedStart&&savedEnd){
+  startInput.value=savedStart;
+  endInput.value=savedEnd;
+}else{
+  setDefaultRange();
+}
+
+function saveRange(){
+  localStorage.setItem('startTime',startInput.value);
+  localStorage.setItem('endTime',endInput.value);
+}
+
+startInput.addEventListener('change',()=>{saveRange();loadInstances();});
+endInput.addEventListener('change',()=>{saveRange();loadInstances();});
+loadInstances();
+updateHeaderButtons();
+todayBtn.addEventListener('click',()=>{
+  setDefaultRange();
+  saveRange();
   loadInstances();
 });
 
