@@ -16,15 +16,7 @@ h1 {
   text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
 }
 
-/* Formularz */
-form {
-  max-width: 1400px;
-  margin: 0 auto 32px auto;
-  background-color: #1e1e1e;
-  padding: 20px;
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
-}
+
 
 .form-label {
   color: #ccc;
@@ -37,9 +29,7 @@ form {
   border: 1px solid #444;
   color: #eee;
 }
-.form-control::placeholder {
-  color: #888;
-}
+
 
 /* Przyciski */
 .btn-primary {
@@ -56,27 +46,6 @@ form {
 }
 .btn-secondary:hover {
   background-color: #333;
-}
-
-/* Tabela */
-.table-dark {
-  background-color: #1e1e1e;
-  color: #ddd;
-  border-radius: 12px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
-}
-.table-dark thead {
-  background-color: #2a2a2a;
-}
-.table-dark thead th {
-  color: #ccc;
-  border-bottom: 1px solid #444;
-}
-.table-dark tbody tr:hover {
-  background-color: #2e2e2e;
-}
-.table-dark td {
-  border-bottom: 1px solid #333;
 }
 
 /* Summary */
