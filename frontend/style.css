@@ -563,6 +563,7 @@ h1 {
 }
 .sidebar #sidebarShutdown {
   margin-top: auto;
+  margin-bottom: 100px;
   color: #ff5555;
 }
 .sidebar.collapsed li span {
