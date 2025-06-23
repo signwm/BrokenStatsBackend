@@ -460,3 +460,56 @@ h1 {
 .datetime-row .form-group {
   flex: 1;
 }
+/* Sidebar */
+.sidebar {
+  width: 220px;
+  background-color: #1e1e1e;
+  padding: 10px;
+  transition: width 0.3s;
+  display: flex;
+  flex-direction: column;
+}
+.sidebar.collapsed {
+  width: 40px;
+}
+.sidebar button.toggle {
+  background-color: #333;
+  color: #eee;
+  border: none;
+  padding: 8px;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+.sidebar ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.sidebar li {
+  padding: 8px;
+}
+.sidebar li:hover {
+  background-color: #2e2e2e;
+}
+.sidebar li a,
+.sidebar li button {
+  color: #eee;
+  text-decoration: none;
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.sidebar.collapsed li span {
+  display: none;
+}
+.content {
+  flex: 1;
+  padding: 20px;
+}
+body.with-sidebar {
+  display: flex;
+  min-height: 100vh;
+}

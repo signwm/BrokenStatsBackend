@@ -5,18 +5,52 @@
   <title>Statystyki Instancji</title>
   <link rel="stylesheet" href="style.css">
   <style>
-    body{display:flex;flex-direction:column;align-items:center;gap:20px;}
     .controls{display:flex;gap:10px;margin-bottom:10px;justify-content:center;align-items:center;}
     .sticky-controls{position:sticky;top:0;z-index:100;background-color:#121212;padding:10px;width:100%;}
   </style>
 </head>
-<body>
-  <div class="controls sticky-controls">
-    <button id="backDashboardBtn" class="back-button">Powrót</button>
+<body class="with-sidebar">
+  <div class="sidebar" id="sidebar">
+    <button class="toggle" id="sidebarToggle">☰</button>
+    <ul>
+      <li><a href="dashboard.html"><span>Lista Instancji</span></a></li>
+      <li><a href="stats.html"><span>Statystyki instancji</span></a></li>
+      <li><a href="without.html"><span>Walki bez instancji</span></a></li>
+      <li><button id="sidebarShutdown"><span>Zamknij aplikację</span></button></li>
+    </ul>
   </div>
-  <div id="statsTableContainer" style="width:100%;"></div>
+  <div class="content">
+    <div class="controls sticky-controls">
+      <button id="backDashboardBtn" class="back-button">Powrót</button>
+    </div>
+    <div id="statsTableContainer" style="width:100%;"></div>
+  </div>
 <script>
 document.addEventListener('DOMContentLoaded',()=>{
+  const sidebarToggle = document.getElementById('sidebarToggle');
+  const sidebarShutdown = document.getElementById('sidebarShutdown');
+  sidebarToggle.addEventListener('click', () => { document.getElementById('sidebar').classList.toggle('collapsed'); });
+  sidebarShutdown.addEventListener('click', () => { fetch('/api/shutdown', { method: 'POST' }).then(() => { window.close(); }); });
+  function downloadTableAsCSV(table, filename) {
+    const rows = Array.from(table.querySelectorAll('tr')).map(tr =>
+      Array.from(tr.querySelectorAll('th,td')).map(td => {
+        let text = td.innerText.replace(/\n/g, ' ').trim();
+        text = text.replace(/"/g, '""');
+        return text.includes(',') || text.includes('"') ? `"${text}"` : text;
+      }).join(',')
+    ).join('\n');
+    const blob = new Blob([rows], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+  function createCsvButton(table, filename) {
+    const btn = document.createElement('button');
+    btn.textContent = 'Pobierz CSV';
+    btn.className = 'csv-button';
+    btn.addEventListener('click', () => downloadTableAsCSV(table, filename));
   function downloadTableAsCSV(table, filename){
     const rows=Array.from(table.querySelectorAll('tr')).map(tr=>
       Array.from(tr.querySelectorAll('th,td')).map(td=>{
@@ -31,13 +65,6 @@ document.addEventListener('DOMContentLoaded',()=>{
     a.download=filename;
     a.click();
     URL.revokeObjectURL(a.href);
-  }
-  function createCsvButton(table, filename){
-    const btn=document.createElement('button');
-    btn.textContent='Pobierz CSV';
-    btn.className='csv-button';
-    btn.addEventListener('click',()=>downloadTableAsCSV(table, filename));
-    return btn;
   }
   document.getElementById('backDashboardBtn').addEventListener('click',()=>{
     window.location.href='dashboard.html';
