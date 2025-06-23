@@ -143,7 +143,7 @@ async function showInstances(list, noneFights){
   instanceStarts={};
   const table=document.createElement('table');
   table.className='custom-dark-table';
-  table.innerHTML=`<thead><tr><th></th><th>Data startu</th><th>Nazwa</th><th>Trudność</th><th>Złoto</th><th>Exp</th><th>Psycho</th><th>Zarobek</th><th>Walki</th><th>Czas trwania</th></tr></thead>`;
+  table.innerHTML=`<thead><tr><th><input type="checkbox" id="selectAll"></th><th>Data startu</th><th>Nazwa</th><th>Trudność</th><th>Złoto</th><th>Exp</th><th>Psycho</th><th>Zarobek</th><th>Walki</th><th>Czas trwania</th></tr></thead>`;
   const tbody=document.createElement('tbody');
   if(noneFights.length>0){
     const agg=aggregate(noneFights);
@@ -164,9 +164,11 @@ async function showInstances(list, noneFights){
   });
   table.appendChild(tbody);
   instancesDiv.appendChild(table);
+  const selectAllCb=table.querySelector('#selectAll');
   tbody.querySelectorAll('button.close').forEach(btn=>btn.addEventListener('click',e=>{e.stopPropagation();closeInstance(btn.dataset.id);}));
   tbody.querySelectorAll('tr').forEach(tr=>tr.addEventListener('click',e=>{if(e.target.tagName==='BUTTON'||e.target.type==='checkbox')return;showDetails(tr.dataset.id);}));
-  tbody.querySelectorAll('input[type="checkbox"]').forEach(cb=>cb.addEventListener('change',async ()=>{if(cb.checked)selectedInstances.add(cb.dataset.id);else selectedInstances.delete(cb.dataset.id);await updateListSummary();}));
+  tbody.querySelectorAll('input[type="checkbox"]').forEach(cb=>cb.addEventListener('change',async ()=>{if(cb.checked)selectedInstances.add(cb.dataset.id);else selectedInstances.delete(cb.dataset.id);selectAllCb.checked=[...tbody.querySelectorAll('input[type="checkbox"]')].every(x=>x.checked);await updateListSummary();}));
+  selectAllCb.addEventListener('change',async ()=>{const state=selectAllCb.checked;tbody.querySelectorAll('input[type="checkbox"]').forEach(cb=>{cb.checked=state;if(state)selectedInstances.add(cb.dataset.id);else selectedInstances.delete(cb.dataset.id);});await updateListSummary();});
 }
 function closeInstance(id){
   fetch(`/api/instances/${id}/close`,{method:'POST'}).then(()=>loadInstances());
