@@ -205,6 +205,10 @@ h1 {
   text-align: right;
   color: #fff;
 }
+
+.nowrap {
+  white-space: nowrap;
+}
 .custom-dark-table {
   width: 100%;
   border-collapse: collapse;

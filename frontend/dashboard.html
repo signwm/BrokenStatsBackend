@@ -214,13 +214,13 @@ function showDetails(id){
       .then(r=>r.json()).then(s=>renderSummaryTo(summaryDiv,s));
     const table=document.createElement('table');
     table.className='custom-dark-table';
-    table.innerHTML=`<thead><tr><th>Data</th><th>Złoto</th><th>Exp</th><th>Psycho</th><th>Przeciwnicy</th><th>Drop</th></tr></thead>`;
+    table.innerHTML=`<thead><tr><th class="nowrap">Data</th><th>Złoto</th><th>Exp</th><th>Psycho</th><th>Przeciwnicy</th><th>Drop</th></tr></thead>`;
     const tbody=document.createElement('tbody');
     list.forEach(f=>{
       const time=id==='none'?new Date(f.time):new Date(new Date(start).getTime()+f.offsetSeconds*1000);
       const tr=document.createElement('tr');
       tr.dataset.id=f.id;
-      tr.innerHTML=`<td>${formatTime(time)}</td><td>${f.gold}</td><td>${f.exp}</td><td>${f.psycho}</td><td>${f.opponents}</td><td>${f.drops}</td>`;
+      tr.innerHTML=`<td class="nowrap">${formatDate(time)}</td><td>${f.gold}</td><td>${f.exp}</td><td>${f.psycho}</td><td>${f.opponents}</td><td>${f.drops}</td>`;
       tbody.appendChild(tr);
     });
     table.appendChild(tbody);
