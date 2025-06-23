@@ -209,6 +209,7 @@ function showDetails(id){
     backBtn.style.display='inline-block';
     currentInstanceId=id;
     updateHeaderButtons();
+    updateListSummary();
   });
 }
 function renderSummaryTo(el,s){
@@ -227,6 +228,7 @@ backBtn.addEventListener('click',()=>{
   backBtn.style.display='none';
   currentInstanceId=null;
   updateHeaderButtons();
+  updateListSummary();
 });
 function toInputValue(dt){
   const off=dt.getTimezoneOffset();
