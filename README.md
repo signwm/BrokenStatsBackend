@@ -10,8 +10,7 @@ Start the API with:
 dotnet run
 ```
 
-It listens on `http://localhost:5005`.
-Open that URL in a browser to view the dashboard.
+It listens on `http://localhost:5005` and automatically opens the dashboard in your default browser.
 
 ## Environment
 

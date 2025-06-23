@@ -10,6 +10,7 @@ using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Hosting;
+using System.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -75,6 +76,23 @@ app.MapPost("/api/shutdown", (IHostApplicationLifetime life) =>
 {
     life.StopApplication();
     return Results.Ok();
+});
+
+app.Lifetime.ApplicationStarted.Register(() =>
+{
+    try
+    {
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = "http://localhost:5005",
+            UseShellExecute = true
+        });
+    }
+    catch (Exception ex)
+    {
+        var logger = app.Services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Failed to open browser");
+    }
 });
 
 var scopeFactory = app.Services.GetRequiredService<IServiceScopeFactory>();
