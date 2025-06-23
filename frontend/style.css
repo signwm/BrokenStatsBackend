@@ -255,6 +255,14 @@ h1 {
 .nowrap {
   white-space: nowrap;
 }
+
+/* Truncate long text and show ellipsis */
+.truncate {
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .custom-dark-table {
   width: 100%;
   border-collapse: collapse;

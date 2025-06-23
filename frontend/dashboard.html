@@ -238,14 +238,14 @@ async function showInstances(list){
   instanceStarts={};
   const table=document.createElement('table');
   table.className='custom-dark-table';
-  table.innerHTML=`<thead><tr><th><input type="checkbox" id="selectAll"></th><th>Data startu</th><th>Nazwa</th><th>Trudność</th><th>Złoto</th><th>Exp</th><th>Psycho</th><th>Zarobek</th><th>Walki</th><th>Czas trwania</th></tr></thead>`;
+  table.innerHTML=`<thead><tr><th><input type="checkbox" id="selectAll"></th><th class="nowrap">Data startu</th><th>Nazwa</th><th>Trudność</th><th>Złoto</th><th>Exp</th><th>Psycho</th><th>Zarobek</th><th>Walki</th><th>Czas trwania</th></tr></thead>`;
   const tbody=document.createElement('tbody');
   list.forEach(inst=>{
     instanceStarts[inst.id]=inst.startTime;
     const diff=inst.difficulty===3?'Trudna':inst.difficulty===1?'Normalna':'Łatwa';
     const tr=document.createElement('tr');
     const dur=inst.durationSeconds!=null?formatDuration(inst.durationSeconds):`<button data-id="${inst.id}" class="close end-button">zakończ instancję</button>`;
-    tr.innerHTML=`<td><input type="checkbox" data-id="${inst.id}"></td><td>${formatDate(new Date(inst.startTime))}</td><td>${inst.name}</td><td>${diff}</td><td>${inst.gold.toLocaleString()}</td><td>${inst.exp.toLocaleString()}</td><td>${inst.psycho.toLocaleString()}</td><td>${inst.profit.toLocaleString()}</td><td>${inst.fights}</td><td>${dur}</td>`;
+    tr.innerHTML=`<td><input type="checkbox" data-id="${inst.id}"></td><td class="nowrap">${formatDate(new Date(inst.startTime))}</td><td>${inst.name}</td><td>${diff}</td><td>${inst.gold.toLocaleString()}</td><td>${inst.exp.toLocaleString()}</td><td>${inst.psycho.toLocaleString()}</td><td>${inst.profit.toLocaleString()}</td><td>${inst.fights}</td><td>${dur}</td>`;
     tr.dataset.id=inst.id;
     tbody.appendChild(tr);
   });
@@ -290,7 +290,7 @@ function showDetails(id){
       const time=id==='none'?new Date(f.time):new Date(new Date(start).getTime()+f.offsetSeconds*1000);
       const tr=document.createElement('tr');
       tr.dataset.id=f.id;
-      tr.innerHTML=`<td class="nowrap">${formatDate(time)}</td><td>${f.gold}</td><td>${f.exp}</td><td>${f.psycho}</td><td>${f.opponents}</td><td>${f.drops}</td>`;
+      tr.innerHTML=`<td class="nowrap">${formatDate(time)}</td><td>${f.gold}</td><td>${f.exp}</td><td>${f.psycho}</td><td class="truncate" title="${f.opponents}">${f.opponents}</td><td class="truncate" title="${f.drops}">${f.drops}</td>`;
       tbody.appendChild(tr);
     });
     table.appendChild(tbody);
