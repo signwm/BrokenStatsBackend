@@ -20,9 +20,7 @@
     </ul>
   </div>
   <div class="content">
-    <div class="controls sticky-controls">
-      <button id="backDashboardBtn" class="button standard-button">Powrót</button>
-    </div>
+    <h1>Statystyki instancji</h1>
     <div id="statsTableContainer" style="width:100%;"></div>
   </div>
 <script>
@@ -30,7 +28,13 @@ document.addEventListener('DOMContentLoaded',()=>{
   const sidebarToggle = document.getElementById('sidebarToggle');
   const sidebarShutdown = document.getElementById('sidebarShutdown');
   sidebarToggle.addEventListener('click', () => { document.getElementById('sidebar').classList.toggle('collapsed'); });
-  sidebarShutdown.addEventListener('click', () => { fetch('/api/shutdown', { method: 'POST' }).then(() => { window.close(); }); });
+  sidebarShutdown.addEventListener('click', () => {
+    if(confirm('Czy na pewno chcesz zamknąć aplikację?')){
+      fetch('/api/shutdown', { method: 'POST' }).then(() => {
+        window.close();
+      });
+    }
+  });
   function downloadTableAsCSV(table, filename) {
     const rows = Array.from(table.querySelectorAll('tr')).map(tr =>
       Array.from(tr.querySelectorAll('th,td')).map(td => {
@@ -53,9 +57,6 @@ document.addEventListener('DOMContentLoaded',()=>{
     btn.addEventListener('click', () => downloadTableAsCSV(table, filename));
     return btn;
   }
-  document.getElementById('backDashboardBtn').addEventListener('click',()=>{
-    window.location.href='dashboard.html';
-  });
   fetch('/api/instances/stats').then(r=>r.json()).then(showStats);
   function showStats(list){
     const table=document.createElement('table');
