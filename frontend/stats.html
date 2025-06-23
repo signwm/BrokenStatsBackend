@@ -51,7 +51,20 @@ document.addEventListener('DOMContentLoaded',()=>{
     btn.textContent = 'Pobierz CSV';
     btn.className = 'csv-button';
     btn.addEventListener('click', () => downloadTableAsCSV(table, filename));
-    return btn;
+  function downloadTableAsCSV(table, filename){
+    const rows=Array.from(table.querySelectorAll('tr')).map(tr=>
+      Array.from(tr.querySelectorAll('th,td')).map(td=>{
+        let text=td.innerText.replace(/\n/g,' ').trim();
+        text=text.replace(/"/g,'""');
+        return text.includes(',')||text.includes('"')?`"${text}"`:text;
+      }).join(',')
+    ).join('\n');
+    const blob=new Blob([rows],{type:'text/csv;charset=utf-8;'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download=filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
   }
   document.getElementById('backDashboardBtn').addEventListener('click',()=>{
     window.location.href='dashboard.html';
