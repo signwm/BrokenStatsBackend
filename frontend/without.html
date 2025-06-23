@@ -70,6 +70,7 @@
     </ul>
   </div>
   <div class="content">
+    <h1>Walki bez instancji</h1>
     <div class="controls sticky-controls">
       <div class="controls-top-row">
         <div class="left-controls">
@@ -183,7 +184,11 @@ todayBtn.addEventListener('click',()=>{setDefaultRange();saveRange();loadFights(
 prevDayBtn.addEventListener('click',()=>{const s=new Date(startInput.value);const e=new Date(endInput.value);s.setDate(s.getDate()-1);e.setDate(e.getDate()-1);startInput.value=toInputValue(s);endInput.value=toInputValue(e);saveRange();loadFights();});
 nextDayBtn.addEventListener('click',()=>{const s=new Date(startInput.value);const e=new Date(endInput.value);s.setDate(s.getDate()+1);e.setDate(e.getDate()+1);startInput.value=toInputValue(s);endInput.value=toInputValue(e);saveRange();loadFights();});
 sidebarToggle.addEventListener('click',()=>{document.getElementById('sidebar').classList.toggle('collapsed');});
-sidebarShutdown.addEventListener('click',()=>{fetch('/api/shutdown',{method:'POST'}).then(()=>{window.close();});});
+sidebarShutdown.addEventListener('click',()=>{
+  if(confirm('Czy na pewno chcesz zamknąć aplikację?')){
+    fetch('/api/shutdown',{method:'POST'}).then(()=>{window.close();});
+  }
+});
 summaryBtn.addEventListener('click',async ()=>{
   if(selected.size===0){alert('Nic nie zaznaczono');return;}
   const ids=Array.from(selected);

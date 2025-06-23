@@ -70,6 +70,7 @@
     </ul>
   </div>
   <div class="content">
+    <h1>Lista Instancji</h1>
     <div class="controls sticky-controls">
       <div class="controls-top-row">
         <div class="left-controls">
@@ -418,9 +419,11 @@ deleteBtn.addEventListener('click',async ()=>{
   loadInstances();
 });
 sidebarShutdown.addEventListener('click',()=>{
-  fetch('/api/shutdown',{method:'POST'}).then(()=>{
-    window.close();
-  });
+  if(confirm('Czy na pewno chcesz zamknąć aplikację?')){
+    fetch('/api/shutdown',{method:'POST'}).then(()=>{
+      window.close();
+    });
+  }
 });
 sidebarToggle.addEventListener('click',()=>{
   document.getElementById('sidebar').classList.toggle('collapsed');
