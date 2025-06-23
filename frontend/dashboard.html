@@ -16,6 +16,7 @@
     <label id="startLabel">Start: <input type="datetime-local" id="start"></label>
     <label id="endLabel">Koniec: <input type="datetime-local" id="end"></label>
     <button id="todayBtn" class="back-button">Dzisiaj</button>
+    <button id="statsBtn" class="back-button">Statystyki</button>
     <button id="backBtn" class="back-button" style="display:none;">Powrót</button>
     <button id="createBtn" class="end-button" style="display:none;">Stwórz instancję</button>
     <button id="deleteBtn" class="end-button" style="display:none;">Usuń instancję</button>
@@ -33,6 +34,7 @@ const endInput=document.getElementById('end');
 const startLabel=document.getElementById('startLabel');
 const endLabel=document.getElementById('endLabel');
 const todayBtn=document.getElementById('todayBtn');
+const statsBtn=document.getElementById('statsBtn');
 const backBtn=document.getElementById('backBtn');
 const createBtn=document.getElementById('createBtn');
 const deleteBtn=document.getElementById('deleteBtn');
@@ -290,6 +292,9 @@ todayBtn.addEventListener('click',()=>{
   setDefaultRange();
   saveRange();
   loadInstances();
+});
+statsBtn.addEventListener('click',()=>{
+  window.location.href='stats.html';
 });
 
 function openCreateInstanceModal(){

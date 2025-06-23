@@ -67,6 +67,8 @@ app.UseDefaultFiles(new DefaultFilesOptions
 app.UseStaticFiles(new StaticFileOptions { FileProvider = new PhysicalFileProvider(frontendPath) });
 // Serve dashboard also under /dashboard for backwards compatibility
 app.MapGet("/dashboard", () => Results.File(Path.Combine(frontendPath, "dashboard.html"), "text/html"));
+// Stats page
+app.MapGet("/stats", () => Results.File(Path.Combine(frontendPath, "stats.html"), "text/html"));
 app.MapControllers();
 
 var scopeFactory = app.Services.GetRequiredService<IServiceScopeFactory>();

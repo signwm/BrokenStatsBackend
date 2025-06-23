@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Statystyki Instancji</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body{display:flex;flex-direction:column;align-items:center;gap:20px;}
+    .controls{display:flex;gap:10px;margin-bottom:10px;justify-content:center;align-items:center;}
+    .sticky-controls{position:sticky;top:0;z-index:100;background-color:#121212;padding:10px;width:100%;}
+  </style>
+</head>
+<body>
+  <div class="controls sticky-controls">
+    <button id="backDashboardBtn" class="back-button">Powrót</button>
+  </div>
+  <div id="statsTableContainer" style="width:100%;"></div>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('backDashboardBtn').addEventListener('click',()=>{
+    window.location.href='dashboard.html';
+  });
+  fetch('/api/instances/stats').then(r=>r.json()).then(showStats);
+  function showStats(list){
+    const table=document.createElement('table');
+    table.className='custom-dark-table';
+    table.innerHTML=`<thead><tr><th>Nazwa</th><th>Trudność</th><th>Ilość</th><th>Śr. czas</th><th>Śr. złoto</th><th>Śr. exp</th><th>Śr. psycho</th><th>Śr. zysk</th></tr></thead>`;
+    const tbody=document.createElement('tbody');
+    list.forEach(s=>{
+      const diff=s.difficulty===3?'Trudna':s.difficulty===1?'Normalna':'Łatwa';
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${s.name}</td><td>${diff}</td><td>${s.count}</td><td>${s.avgTime}</td><td>${s.avgGold.toLocaleString()}</td><td>${s.avgExp.toLocaleString()}</td><td>${s.avgPsycho.toLocaleString()}</td><td>${s.avgProfit.toLocaleString()}</td>`;
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    document.getElementById('statsTableContainer').appendChild(table);
+  }
+});
+</script>
+</body>
+</html>
