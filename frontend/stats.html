@@ -27,10 +27,32 @@
   </div>
 <script>
 document.addEventListener('DOMContentLoaded',()=>{
-  const sidebarToggle=document.getElementById('sidebarToggle');
-  const sidebarShutdown=document.getElementById('sidebarShutdown');
-  sidebarToggle.addEventListener('click',()=>{document.getElementById('sidebar').classList.toggle('collapsed');});
-  sidebarShutdown.addEventListener('click',()=>{fetch('/api/shutdown',{method:'POST'}).then(()=>{window.close();});});
+  const sidebarToggle = document.getElementById('sidebarToggle');
+  const sidebarShutdown = document.getElementById('sidebarShutdown');
+  sidebarToggle.addEventListener('click', () => { document.getElementById('sidebar').classList.toggle('collapsed'); });
+  sidebarShutdown.addEventListener('click', () => { fetch('/api/shutdown', { method: 'POST' }).then(() => { window.close(); }); });
+  function downloadTableAsCSV(table, filename) {
+    const rows = Array.from(table.querySelectorAll('tr')).map(tr =>
+      Array.from(tr.querySelectorAll('th,td')).map(td => {
+        let text = td.innerText.replace(/\n/g, ' ').trim();
+        text = text.replace(/"/g, '""');
+        return text.includes(',') || text.includes('"') ? `"${text}"` : text;
+      }).join(',')
+    ).join('\n');
+    const blob = new Blob([rows], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+  function createCsvButton(table, filename) {
+    const btn = document.createElement('button');
+    btn.textContent = 'Pobierz CSV';
+    btn.className = 'csv-button';
+    btn.addEventListener('click', () => downloadTableAsCSV(table, filename));
+    return btn;
+  }
   document.getElementById('backDashboardBtn').addEventListener('click',()=>{
     window.location.href='dashboard.html';
   });
@@ -47,7 +69,9 @@ document.addEventListener('DOMContentLoaded',()=>{
       tbody.appendChild(tr);
     });
     table.appendChild(tbody);
-    document.getElementById('statsTableContainer').appendChild(table);
+    const container=document.getElementById('statsTableContainer');
+    container.appendChild(table);
+    container.appendChild(createCsvButton(table,'statystyki.csv'));
   }
 });
 </script>

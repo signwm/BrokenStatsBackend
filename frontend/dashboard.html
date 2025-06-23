@@ -63,6 +63,30 @@ let selectedNone=new Set();
 let currentInstanceId=null;
 let summaryMode=false;
 
+function downloadTableAsCSV(table, filename){
+  const rows=Array.from(table.querySelectorAll('tr')).map(tr=>
+    Array.from(tr.querySelectorAll('th,td')).map(td=>{
+      let text=td.innerText.replace(/\n/g,' ').trim();
+      text=text.replace(/"/g,'""');
+      return text.includes(',')||text.includes('"')?`"${text}"`:text;
+    }).join(',')
+  ).join('\n');
+  const blob=new Blob([rows],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function createCsvButton(table, filename){
+  const btn=document.createElement('button');
+  btn.textContent='Pobierz CSV';
+  btn.className='csv-button';
+  btn.addEventListener('click',()=>downloadTableAsCSV(table, filename));
+  return btn;
+}
+
 function updateNoneSelection(row, selected){
   if(selected){
     selectedNone.add(row.dataset.id);
@@ -164,6 +188,7 @@ async function showInstances(list){
   });
   table.appendChild(tbody);
   instancesDiv.appendChild(table);
+  instancesDiv.appendChild(createCsvButton(table,'instancje.csv'));
   const selectAllCb=table.querySelector('#selectAll');
   tbody.querySelectorAll('button.close').forEach(btn=>btn.addEventListener('click',e=>{e.stopPropagation();closeInstance(btn.dataset.id);}));
   tbody.querySelectorAll('tr').forEach(tr=>tr.addEventListener('click',e=>{if(e.target.tagName==='BUTTON'||e.target.type==='checkbox')return;showDetails(tr.dataset.id);}));
@@ -208,6 +233,7 @@ function showDetails(id){
     table.appendChild(tbody);
     fightsDiv.innerHTML='';
     fightsDiv.appendChild(table);
+    fightsDiv.appendChild(createCsvButton(table,'walki.csv'));
     if(id==='none'){
       selectedNone=new Set();
       enableDragSelection(tbody);
