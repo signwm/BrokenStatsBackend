@@ -5,24 +5,33 @@
   <title>Dashboard</title>
   <link rel="stylesheet" href="style.css">
   <style>
-    body{display:flex;flex-direction:column;align-items:center;gap:20px;}
     .controls{display:flex;gap:10px;margin-bottom:10px;justify-content:center;align-items:center;}
     .sticky-controls{position:sticky;top:0;z-index:100;background-color:#121212;padding:10px;width:100%;}
     #details{width:100%;}
   </style>
 </head>
-<body>
-  <div class="controls sticky-controls">
-    <label id="startLabel">Start: <input type="datetime-local" id="start"></label>
-    <label id="endLabel">Koniec: <input type="datetime-local" id="end"></label>
-    <button id="todayBtn" class="back-button">Dzisiaj</button>
-    <button id="statsBtn" class="back-button">Statystyki</button>
-    <button id="backBtn" class="back-button" style="display:none;">Powrót</button>
-    <button id="createBtn" class="end-button" style="display:none;">Stwórz instancję</button>
-    <button id="deleteBtn" class="end-button" style="display:none;">Usuń instancję</button>
-    <button id="shutdownBtn" class="end-button">Zamknij aplikację</button>
+<body class="with-sidebar">
+  <div class="sidebar" id="sidebar">
+    <button class="toggle" id="sidebarToggle">☰</button>
+    <ul>
+      <li><a href="dashboard.html"><span>Lista Instancji</span></a></li>
+      <li><a href="stats.html"><span>Statystyki instancji</span></a></li>
+      <li><a href="without.html"><span>Walki bez instancji</span></a></li>
+      <li><button id="sidebarShutdown"><span>Zamknij aplikację</span></button></li>
+    </ul>
   </div>
-  <div id="listSummary" class="summary-widget"></div>
+  <div class="content">
+    <div class="controls sticky-controls">
+      <label id="startLabel">Start: <input type="datetime-local" id="start"></label>
+      <label id="endLabel">Koniec: <input type="datetime-local" id="end"></label>
+      <button id="todayBtn" class="back-button">Dzisiaj</button>
+      <button id="prevDayBtn" class="back-button">&lt;</button>
+      <button id="nextDayBtn" class="back-button">&gt;</button>
+      <button id="summaryBtn" class="back-button">Podsumowanie</button>
+      <button id="backBtn" class="back-button" style="display:none;">Powrót</button>
+      <button id="createBtn" class="end-button" style="display:none;">Stwórz instancję</button>
+      <button id="deleteBtn" class="end-button" style="display:none;">Usuń instancję</button>
+    </div>
   <div id="instances"></div>
   <div id="details" style="display:none;">
     <div id="detailSummary" class="summary-widget"></div>
@@ -35,21 +44,24 @@ const endInput=document.getElementById('end');
 const startLabel=document.getElementById('startLabel');
 const endLabel=document.getElementById('endLabel');
 const todayBtn=document.getElementById('todayBtn');
-const statsBtn=document.getElementById('statsBtn');
+const prevDayBtn=document.getElementById('prevDayBtn');
+const nextDayBtn=document.getElementById('nextDayBtn');
+const summaryBtn=document.getElementById('summaryBtn');
 const backBtn=document.getElementById('backBtn');
 const createBtn=document.getElementById('createBtn');
 const deleteBtn=document.getElementById('deleteBtn');
-const shutdownBtn=document.getElementById('shutdownBtn');
+const sidebarToggle=document.getElementById('sidebarToggle');
+const sidebarShutdown=document.getElementById('sidebarShutdown');
 const instancesDiv=document.getElementById('instances');
 const detailsDiv=document.getElementById('details');
 const summaryDiv=document.getElementById('detailSummary');
-const listSummary=document.getElementById('listSummary');
 const fightsDiv=document.getElementById('fights');
 let instanceStarts={};
 const selectedInstances=new Set();
 const fightCache={};
 let selectedNone=new Set();
 let currentInstanceId=null;
+let summaryMode=false;
 
 function updateNoneSelection(row, selected){
   if(selected){
@@ -100,8 +112,8 @@ function enableDragSelection(tbody){
 }
 
 function updateHeaderButtons(){
-  if(currentInstanceId==='none'){
-    createBtn.style.display='inline-block';
+  if(summaryMode){
+    createBtn.style.display='none';
     deleteBtn.style.display='none';
   } else if(currentInstanceId){
     createBtn.style.display='none';
@@ -124,36 +136,16 @@ function aggregate(list){
 }
 async function loadFights(id){
   if(fightCache[id]) return fightCache[id];
-  if(id==='none'){return fightCache['none'];}
   const res=await fetch(`/api/instances/${id}/fights`);const data=await res.json();fightCache[id]=data;return data;
-}
-async function updateListSummary(){
-  if(selectedInstances.size===0){
-    if(detailsDiv.style.display==='block'){
-      listSummary.innerHTML='';
-    } else {
-      listSummary.innerHTML='<div class="no-fights-card"><p class="no-fights-text">Nic nie zaznaczono.</p></div>';
-    }
-    return;
-  }
-  const ids=[];
-  for(const id of selectedInstances){const fights=await loadFights(id);ids.push(...fights.map(f=>f.id));}
-  const res=await fetch('/api/fights/summary',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(ids)});const s=await res.json();
-  renderSummaryTo(listSummary,s);
 }
 async function loadInstances(){
   const from=startInput.value;const to=endInput.value;
   if(!from||!to)return;
-  const [inst, none] = await Promise.all([
-    fetch(`/api/instances/range?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`).then(r=>r.json()),
-    fetch(`/api/instances/without/fights?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`).then(r=>r.json())
-  ]);
-  fightCache['none']=none;
-  showInstances(inst, none);
+  const inst = await fetch(`/api/instances/range?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`).then(r=>r.json());
+  showInstances(inst);
 }
-async function showInstances(list, noneFights){
+async function showInstances(list){
   list.sort((a,b)=>new Date(b.startTime)-new Date(a.startTime));
-  noneFights.sort((a,b)=>new Date(b.time)-new Date(a.time));
   selectedInstances.clear();
   instancesDiv.innerHTML='';
   instanceStarts={};
@@ -161,14 +153,6 @@ async function showInstances(list, noneFights){
   table.className='custom-dark-table';
   table.innerHTML=`<thead><tr><th><input type="checkbox" id="selectAll"></th><th>Data startu</th><th>Nazwa</th><th>Trudność</th><th>Złoto</th><th>Exp</th><th>Psycho</th><th>Zarobek</th><th>Walki</th><th>Czas trwania</th></tr></thead>`;
   const tbody=document.createElement('tbody');
-  if(noneFights.length>0){
-    const agg=aggregate(noneFights);
-    instanceStarts['none']=agg.start;
-    const tr=document.createElement('tr');
-    tr.dataset.id='none';
-    tr.innerHTML=`<td><input type="checkbox" data-id="none"></td><td>${formatDate(new Date(agg.start))}</td><td>Bez instancji</td><td></td><td>${agg.gold.toLocaleString()}</td><td>${agg.exp.toLocaleString()}</td><td>${agg.psycho.toLocaleString()}</td><td>${agg.profit.toLocaleString()}</td><td>${agg.count}</td><td>${formatDuration(agg.duration)}</td>`;
-    tbody.appendChild(tr);
-  }
   list.forEach(inst=>{
     instanceStarts[inst.id]=inst.startTime;
     const diff=inst.difficulty===3?'Trudna':inst.difficulty===1?'Normalna':'Łatwa';
@@ -186,7 +170,6 @@ async function showInstances(list, noneFights){
   tbody.querySelectorAll('input[type="checkbox"]').forEach(cb=>cb.addEventListener('change',async ()=>{
     updateInstanceSelection(cb.closest('tr'), cb.checked);
     selectAllCb.checked=[...tbody.querySelectorAll('input[type="checkbox"]')].every(x=>x.checked);
-    await updateListSummary();
   }));
   selectAllCb.addEventListener('change',async ()=>{
     const state=selectAllCb.checked;
@@ -194,7 +177,6 @@ async function showInstances(list, noneFights){
       cb.checked=state;
       updateInstanceSelection(cb.closest('tr'), state);
     });
-    await updateListSummary();
   });
 }
 function closeInstance(id){
@@ -235,10 +217,9 @@ function showDetails(id){
     startLabel.style.display='none';
     endLabel.style.display='none';
     todayBtn.style.display='none';
-    backBtn.style.display='inline-block';
-    currentInstanceId=id;
-    updateHeaderButtons();
-    updateListSummary();
+  backBtn.style.display='inline-block';
+  currentInstanceId=id;
+  updateHeaderButtons();
   });
 }
 function renderSummaryTo(el,s){
@@ -254,10 +235,12 @@ backBtn.addEventListener('click',()=>{
   startLabel.style.display='inline-block';
   endLabel.style.display='inline-block';
   todayBtn.style.display='inline-block';
+  prevDayBtn.style.display='inline-block';
+  nextDayBtn.style.display='inline-block';
   backBtn.style.display='none';
   currentInstanceId=null;
+  summaryMode=false;
   updateHeaderButtons();
-  updateListSummary();
 });
 function toInputValue(dt){
   const off=dt.getTimezoneOffset();
@@ -294,9 +277,6 @@ todayBtn.addEventListener('click',()=>{
   setDefaultRange();
   saveRange();
   loadInstances();
-});
-statsBtn.addEventListener('click',()=>{
-  window.location.href='stats.html';
 });
 
 function openCreateInstanceModal(){
@@ -340,14 +320,42 @@ createBtn.addEventListener('click',openCreateInstanceModal);
 deleteBtn.addEventListener('click',async ()=>{
   const id=deleteBtn.dataset.id;
   if(!id) return;
+  if(!confirm('Usunąć instancję?')) return;
   await fetch(`/api/instances/${id}`,{method:'DELETE'});
   backBtn.click();
   loadInstances();
 });
-shutdownBtn.addEventListener('click',()=>{
+sidebarShutdown.addEventListener('click',()=>{
   fetch('/api/shutdown',{method:'POST'}).then(()=>{
     window.close();
   });
+});
+sidebarToggle.addEventListener('click',()=>{
+  document.getElementById('sidebar').classList.toggle('collapsed');
+});
+prevDayBtn.addEventListener('click',()=>{
+  const s=new Date(startInput.value);const e=new Date(endInput.value);s.setDate(s.getDate()-1);e.setDate(e.getDate()-1);startInput.value=toInputValue(s);endInput.value=toInputValue(e);saveRange();loadInstances();
+});
+nextDayBtn.addEventListener('click',()=>{
+  const s=new Date(startInput.value);const e=new Date(endInput.value);s.setDate(s.getDate()+1);e.setDate(e.getDate()+1);startInput.value=toInputValue(s);endInput.value=toInputValue(e);saveRange();loadInstances();
+});
+summaryBtn.addEventListener('click',async ()=>{
+  if(selectedInstances.size===0){alert('Nic nie zaznaczono');return;}
+  const ids=[];for(const id of selectedInstances){const fights=await loadFights(id);ids.push(...fights.map(f=>f.id));}
+  const res=await fetch('/api/fights/summary',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(ids)});const s=await res.json();
+  renderSummaryTo(summaryDiv,s);
+  fightsDiv.innerHTML='';
+  instancesDiv.style.display='none';
+  detailsDiv.style.display='block';
+  startLabel.style.display='none';
+  endLabel.style.display='none';
+  todayBtn.style.display='none';
+  prevDayBtn.style.display='none';
+  nextDayBtn.style.display='none';
+  backBtn.style.display='inline-block';
+  summaryMode=true;
+  currentInstanceId=null;
+  updateHeaderButtons();
 });
 });
 </script>
@@ -382,6 +390,7 @@ shutdownBtn.addEventListener('click',()=>{
       <button type="button" id="cancelCreateInstance" class="btn btn-secondary">Anuluj</button>
     </div>
   </div>
+</div>
 </div>
 </body>
 </html>

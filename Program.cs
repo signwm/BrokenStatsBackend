@@ -71,6 +71,8 @@ app.UseStaticFiles(new StaticFileOptions { FileProvider = new PhysicalFileProvid
 app.MapGet("/dashboard", () => Results.File(Path.Combine(frontendPath, "dashboard.html"), "text/html"));
 // Stats page
 app.MapGet("/stats", () => Results.File(Path.Combine(frontendPath, "stats.html"), "text/html"));
+// Fights without instance page
+app.MapGet("/without", () => Results.File(Path.Combine(frontendPath, "without.html"), "text/html"));
 app.MapControllers();
 app.MapPost("/api/shutdown", (IHostApplicationLifetime life) =>
 {
