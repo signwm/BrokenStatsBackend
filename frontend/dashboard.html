@@ -345,7 +345,9 @@ deleteBtn.addEventListener('click',async ()=>{
   loadInstances();
 });
 shutdownBtn.addEventListener('click',()=>{
-  fetch('/api/shutdown',{method:'POST'});
+  fetch('/api/shutdown',{method:'POST'}).then(()=>{
+    window.close();
+  });
 });
 });
 </script>
