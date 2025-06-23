@@ -20,6 +20,7 @@
     <button id="backBtn" class="back-button" style="display:none;">Powrót</button>
     <button id="createBtn" class="end-button" style="display:none;">Stwórz instancję</button>
     <button id="deleteBtn" class="end-button" style="display:none;">Usuń instancję</button>
+    <button id="shutdownBtn" class="end-button">Zamknij aplikację</button>
   </div>
   <div id="listSummary" class="summary-widget"></div>
   <div id="instances"></div>
@@ -38,6 +39,7 @@ const statsBtn=document.getElementById('statsBtn');
 const backBtn=document.getElementById('backBtn');
 const createBtn=document.getElementById('createBtn');
 const deleteBtn=document.getElementById('deleteBtn');
+const shutdownBtn=document.getElementById('shutdownBtn');
 const instancesDiv=document.getElementById('instances');
 const detailsDiv=document.getElementById('details');
 const summaryDiv=document.getElementById('detailSummary');
@@ -341,6 +343,9 @@ deleteBtn.addEventListener('click',async ()=>{
   await fetch(`/api/instances/${id}`,{method:'DELETE'});
   backBtn.click();
   loadInstances();
+});
+shutdownBtn.addEventListener('click',()=>{
+  fetch('/api/shutdown',{method:'POST'});
 });
 });
 </script>

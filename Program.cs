@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Http;
 using System.Linq;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Hosting;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -70,6 +71,11 @@ app.MapGet("/dashboard", () => Results.File(Path.Combine(frontendPath, "dashboar
 // Stats page
 app.MapGet("/stats", () => Results.File(Path.Combine(frontendPath, "stats.html"), "text/html"));
 app.MapControllers();
+app.MapPost("/api/shutdown", (IHostApplicationLifetime life) =>
+{
+    life.StopApplication();
+    return Results.Ok();
+});
 
 var scopeFactory = app.Services.GetRequiredService<IServiceScopeFactory>();
 
