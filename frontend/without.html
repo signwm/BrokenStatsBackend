@@ -24,12 +24,13 @@
     <div class="controls sticky-controls">
       <label id="startLabel">Start: <input type="datetime-local" id="start"></label>
       <label id="endLabel">Koniec: <input type="datetime-local" id="end"></label>
-      <button id="todayBtn" class="back-button">Dzisiaj</button>
-      <button id="prevDayBtn" class="back-button">&lt;</button>
-      <button id="nextDayBtn" class="back-button">&gt;</button>
-      <button id="summaryBtn" class="back-button">Podsumowanie</button>
-      <button id="createBtn" class="end-button">Stwórz instancję</button>
-      <button id="backBtn" class="back-button" style="display:none;">Powrót</button>
+
+      <button id="todayBtn" class="button standard-button">Dzisiaj</button>
+      <button id="prevDayBtn" class="button nav-button">&lt;</button>
+      <button id="nextDayBtn" class="button nav-button">&gt;</button>
+      <button id="summaryBtn" class="button standard-button">Podsumowanie</button>
+      <button id="createBtn" class="button primary-button">Stwórz instancję</button>
+      <button id="backBtn" class="button standard-button" style="display:none;">Powrót</button>
     </div>
     <div id="details" style="display:none;">
       <div id="detailSummary" class="summary-widget"></div>
@@ -131,8 +132,9 @@ summaryBtn.addEventListener('click',async ()=>{
   detailsDiv.style.display='block';
   fightsDiv.style.display='none';
   backBtn.style.display='inline-block';
+  summaryBtn.style.display='none';
 });
-backBtn.addEventListener('click',()=>{detailsDiv.style.display='none';fightsDiv.style.display='block';backBtn.style.display='none';});
+backBtn.addEventListener('click',()=>{detailsDiv.style.display='none';fightsDiv.style.display='block';backBtn.style.display='none';summaryBtn.style.display='inline-block';});
 createBtn.addEventListener('click',()=>{
   if(selected.size===0){alert('Zaznacz walki do utworzenia instancji.');return;}
   const times=Array.from(selected).map(id=>new Date(fights.find(x=>x.id===id).time));

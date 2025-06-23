@@ -48,6 +48,47 @@ h1 {
   text-align: center;
 }
 
+/* New button styles used in header */
+.button {
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  transition: background-color 0.2s;
+  color: #eee;
+}
+
+.standard-button {
+  background-color: #444;
+  padding: 6px 12px;
+}
+
+.standard-button:hover {
+  background-color: #555;
+}
+
+.primary-button {
+  background-color: #0066cc;
+  padding: 6px 14px;
+  font-weight: bold;
+  color: #fff;
+}
+
+.primary-button:hover {
+  background-color: #005bb5;
+}
+
+.nav-button {
+  background-color: #333;
+  padding: 4px 8px;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.nav-button:hover {
+  background-color: #444;
+}
+
 .btn-primary {
   background-color: #0066cc;
   border: none;
@@ -462,12 +503,17 @@ h1 {
 }
 /* Sidebar */
 .sidebar {
-  width: 220px;
+  width: 300px;
   background-color: #1e1e1e;
   padding: 10px;
   transition: width 0.3s;
   display: flex;
   flex-direction: column;
+  position: fixed;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  height: 100vh;
 }
 .sidebar.collapsed {
   width: 40px;
@@ -510,6 +556,7 @@ h1 {
   padding: 20px;
 }
 body.with-sidebar {
-  display: flex;
+  display: block;
   min-height: 100vh;
+  margin-right: 300px;
 }
