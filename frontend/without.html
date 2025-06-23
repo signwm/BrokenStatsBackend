@@ -54,6 +54,30 @@ const detailsDiv=document.getElementById('details');
 let fights=[];
 const selected=new Set();
 
+function downloadTableAsCSV(table, filename){
+  const rows=Array.from(table.querySelectorAll('tr')).map(tr=>
+    Array.from(tr.querySelectorAll('th,td')).map(td=>{
+      let text=td.innerText.replace(/\n/g,' ').trim();
+      text=text.replace(/"/g,'""');
+      return text.includes(',')||text.includes('"')?`"${text}"`:text;
+    }).join(',')
+  ).join('\n');
+  const blob=new Blob([rows],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function createCsvButton(table, filename){
+  const btn=document.createElement('button');
+  btn.textContent='Pobierz CSV';
+  btn.className='csv-button';
+  btn.addEventListener('click',()=>downloadTableAsCSV(table, filename));
+  return btn;
+}
+
 function updateSelection(row,sel){
   if(sel){selected.add(row.dataset.id);row.classList.add('selected');}
   else{selected.delete(row.dataset.id);row.classList.remove('selected');}
@@ -85,7 +109,11 @@ async function loadFights(){
   const table=document.createElement('table');table.className='custom-dark-table';table.innerHTML=`<thead><tr><th>Data</th><th>Złoto</th><th>Exp</th><th>Psycho</th><th>Przeciwnicy</th><th>Drop</th></tr></thead>`;
   const tbody=document.createElement('tbody');
   fights.forEach(f=>{const tr=document.createElement('tr');tr.dataset.id=f.id;tr.innerHTML=`<td>${formatDate(new Date(f.time))}</td><td>${f.gold}</td><td>${f.exp}</td><td>${f.psycho}</td><td>${f.opponents}</td><td>${f.drops}</td>`;tbody.appendChild(tr);});
-  table.appendChild(tbody);fightsDiv.innerHTML='';fightsDiv.appendChild(table);enableDragSelection(tbody);
+  table.appendChild(tbody);
+  fightsDiv.innerHTML='';
+  fightsDiv.appendChild(table);
+  fightsDiv.appendChild(createCsvButton(table,'walki.csv'));
+  enableDragSelection(tbody);
 }
 function saveRange(){localStorage.setItem('startTime',startInput.value);localStorage.setItem('endTime',endInput.value);}
 startInput.addEventListener('change',()=>{saveRange();loadFights();});
