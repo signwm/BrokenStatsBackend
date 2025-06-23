@@ -11,10 +11,15 @@ body {
 
 /* Nagłówek */
 h1 {
-  font-size: 22px;
-  margin-bottom: 20px;
-  color: #fff;
+  font-size: 24px;
+  font-weight: 600;
+  color: #f0f0f0;
   text-align: center;
+  margin: 0;
+  padding: 10px 0;
+  letter-spacing: 0.5px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+  border-bottom: 1px solid #333;
 }
 
 
@@ -547,6 +552,10 @@ h1 {
   background: none;
   border: none;
   cursor: pointer;
+}
+.sidebar #sidebarShutdown {
+  margin-top: auto;
+  color: #ff5555;
 }
 .sidebar.collapsed li span {
   display: none;
