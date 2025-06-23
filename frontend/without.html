@@ -168,9 +168,9 @@ async function loadFights(){
   fights=await fetch(`/api/instances/without/fights?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`).then(r=>r.json());
   fights.sort((a,b)=>new Date(b.time)-new Date(a.time));
   selected.clear();
-  const table=document.createElement('table');table.className='custom-dark-table';table.innerHTML=`<thead><tr><th>Data</th><th>Złoto</th><th>Exp</th><th>Psycho</th><th>Przeciwnicy</th><th>Drop</th></tr></thead>`;
+  const table=document.createElement('table');table.className='custom-dark-table';table.innerHTML=`<thead><tr><th class="nowrap">Data</th><th>Złoto</th><th>Exp</th><th>Psycho</th><th>Przeciwnicy</th><th>Drop</th></tr></thead>`;
   const tbody=document.createElement('tbody');
-  fights.forEach(f=>{const tr=document.createElement('tr');tr.dataset.id=f.id;tr.innerHTML=`<td>${formatDate(new Date(f.time))}</td><td>${f.gold}</td><td>${f.exp}</td><td>${f.psycho}</td><td>${f.opponents}</td><td>${f.drops}</td>`;tbody.appendChild(tr);});
+  fights.forEach(f=>{const tr=document.createElement('tr');tr.dataset.id=f.id;tr.innerHTML=`<td class="nowrap">${formatDate(new Date(f.time))}</td><td>${f.gold}</td><td>${f.exp}</td><td>${f.psycho}</td><td class="truncate" title="${f.opponents}">${f.opponents}</td><td class="truncate" title="${f.drops}">${f.drops}</td>`;tbody.appendChild(tr);});
   table.appendChild(tbody);
   fightsDiv.innerHTML='';
   fightsDiv.appendChild(table);
