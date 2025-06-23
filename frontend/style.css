@@ -334,6 +334,9 @@ h1 {
   min-width: 120px;
   text-align: center;
 }
+#backBtn {
+  margin-right: auto;
+}
 
 .end-button {
   background-color: #c62828;
