@@ -14,4 +14,9 @@
     <PackageReference Include="SharpPcap" Version="6.3.1" />
   </ItemGroup>
 
+  <!-- Exclude the WinForms frontend source files from this project -->
+  <ItemGroup>
+    <Compile Remove="WinFormsFrontend\**\*.cs" />
+  </ItemGroup>
+
 </Project>
