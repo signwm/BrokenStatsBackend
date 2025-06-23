@@ -24,12 +24,13 @@
     <div class="controls sticky-controls">
       <label id="startLabel">Start: <input type="datetime-local" id="start"></label>
       <label id="endLabel">Koniec: <input type="datetime-local" id="end"></label>
-      <button id="todayBtn" class="back-button">Dzisiaj</button>
-      <button id="prevDayBtn" class="back-button">&lt;</button>
-      <button id="nextDayBtn" class="back-button">&gt;</button>
-      <button id="summaryBtn" class="back-button">Podsumowanie</button>
-      <button id="backBtn" class="back-button" style="display:none;">Powrót</button>
-      <button id="createBtn" class="end-button" style="display:none;">Stwórz instancję</button>
+
+      <button id="todayBtn" class="button standard-button">Dzisiaj</button>
+      <button id="prevDayBtn" class="button nav-button">&lt;</button>
+      <button id="nextDayBtn" class="button nav-button">&gt;</button>
+      <button id="summaryBtn" class="button standard-button">Podsumowanie</button>
+      <button id="createBtn" class="button primary-button" style="display:none;">Stwórz instancję</button>
+      <button id="backBtn" class="button standard-button" style="display:none;">Powrót</button>
       <button id="deleteBtn" class="end-button" style="display:none;">Usuń instancję</button>
     </div>
   <div id="instances"></div>
@@ -288,6 +289,7 @@ backBtn.addEventListener('click',()=>{
   prevDayBtn.style.display='inline-block';
   nextDayBtn.style.display='inline-block';
   backBtn.style.display='none';
+  summaryBtn.style.display='inline-block';
   currentInstanceId=null;
   summaryMode=false;
   updateHeaderButtons();
@@ -403,6 +405,7 @@ summaryBtn.addEventListener('click',async ()=>{
   prevDayBtn.style.display='none';
   nextDayBtn.style.display='none';
   backBtn.style.display='inline-block';
+  summaryBtn.style.display='none';
   summaryMode=true;
   currentInstanceId=null;
   updateHeaderButtons();
