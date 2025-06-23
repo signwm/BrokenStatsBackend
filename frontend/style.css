@@ -404,7 +404,7 @@ h1 {
   text-align: center;
 }
 #backBtn {
-  margin-right: auto;
+  margin-right: 0;
 }
 
 .end-button {
