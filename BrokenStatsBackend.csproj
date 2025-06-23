@@ -5,6 +5,9 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <OutputType>Exe</OutputType>
+    <!-- Disable automatic assembly info generation to avoid conflicts when
+         building on environments that still have leftover WinForms files. -->
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <RootNamespace>BrokenStatsBackend</RootNamespace>
   </PropertyGroup>
 
