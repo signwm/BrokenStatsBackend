@@ -47,33 +47,39 @@ const fightCache={};
 let selectedNone=new Set();
 let currentInstanceId=null;
 
-function updateNoneSelection(cb){
-  if(cb.checked){
-    selectedNone.add(cb.dataset.id);
-    cb.closest('tr').classList.add('selected');
+function updateNoneSelection(row, selected){
+  if(selected){
+    selectedNone.add(row.dataset.id);
+    row.classList.add('selected');
   }else{
-    selectedNone.delete(cb.dataset.id);
-    cb.closest('tr').classList.remove('selected');
+    selectedNone.delete(row.dataset.id);
+    row.classList.remove('selected');
   }
 }
 
 function enableDragSelection(tbody){
+  const rows=Array.from(tbody.querySelectorAll('tr'));
   let dragging=false;
-  let dragState=false;
+  let dragState=true;
+  let startIndex=null;
   tbody.addEventListener('mousedown',e=>{
-    if(e.target.type==='checkbox'){
-      e.preventDefault();
-      dragging=true;
-      dragState=!e.target.checked;
-      e.target.checked=dragState;
-      updateNoneSelection(e.target);
-    }
+    const tr=e.target.closest('tr');
+    if(!tr) return;
+    e.preventDefault();
+    dragging=true;
+    startIndex=rows.indexOf(tr);
+    dragState=!tr.classList.contains('selected');
+    updateNoneSelection(tr, dragState);
   });
   tbody.addEventListener('mouseover',e=>{
-    if(dragging&&e.target.type==='checkbox'){
-      e.target.checked=dragState;
-      updateNoneSelection(e.target);
-    }
+    if(!dragging) return;
+    const tr=e.target.closest('tr');
+    if(!tr) return;
+    const endIndex=rows.indexOf(tr);
+    const [min,max]=startIndex<endIndex?[startIndex,endIndex]:[endIndex,startIndex];
+    rows.forEach((row,i)=>{
+      if(i>=min&&i<=max) updateNoneSelection(row, dragState);
+    });
   });
   document.addEventListener('mouseup',()=>{dragging=false;});
 }
@@ -179,14 +185,13 @@ function showDetails(id){
       .then(r=>r.json()).then(s=>renderSummaryTo(summaryDiv,s));
     const table=document.createElement('table');
     table.className='custom-dark-table';
-    const hdr=id==='none'?`<th></th>`:'';
-    table.innerHTML=`<thead><tr>${hdr}<th>Data</th><th>Złoto</th><th>Exp</th><th>Psycho</th><th>Przeciwnicy</th><th>Drop</th></tr></thead>`;
+    table.innerHTML=`<thead><tr><th>Data</th><th>Złoto</th><th>Exp</th><th>Psycho</th><th>Przeciwnicy</th><th>Drop</th></tr></thead>`;
     const tbody=document.createElement('tbody');
     list.forEach(f=>{
       const time=id==='none'?new Date(f.time):new Date(new Date(start).getTime()+f.offsetSeconds*1000);
       const tr=document.createElement('tr');
-      const cb=id==='none'?`<td><input type="checkbox" data-id="${f.id}"></td>`:'';
-      tr.innerHTML=`${cb}<td>${formatTime(time)}</td><td>${f.gold}</td><td>${f.exp}</td><td>${f.psycho}</td><td>${f.opponents}</td><td>${f.drops}</td>`;
+      tr.dataset.id=f.id;
+      tr.innerHTML=`<td>${formatTime(time)}</td><td>${f.gold}</td><td>${f.exp}</td><td>${f.psycho}</td><td>${f.opponents}</td><td>${f.drops}</td>`;
       tbody.appendChild(tr);
     });
     table.appendChild(tbody);
@@ -194,8 +199,6 @@ function showDetails(id){
     fightsDiv.appendChild(table);
     if(id==='none'){
       selectedNone=new Set();
-      const cbs=tbody.querySelectorAll('input[type="checkbox"]');
-      cbs.forEach(cb=>cb.addEventListener('change',()=>updateNoneSelection(cb)));
       enableDragSelection(tbody);
     }
     instancesDiv.style.display='none';
