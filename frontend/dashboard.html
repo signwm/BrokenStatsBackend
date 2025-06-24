@@ -81,6 +81,7 @@
         <div class="right-controls">
           <button id="summaryBtn" class="button standard-button">Podsumowanie</button>
           <button id="createBtn" class="button primary-button" style="display:none;">Stwórz instancję</button>
+          <button id="breakBtn" class="button standard-button" style="display:none;">Dodaj przerwę</button>
           <button id="deleteBtn" class="end-button" style="display:none;">Usuń instancję</button>
         </div>
       </div>
@@ -113,6 +114,7 @@ const nextDayBtn=document.getElementById('nextDayBtn');
 const summaryBtn=document.getElementById('summaryBtn');
 const backBtn=document.getElementById('backBtn');
 const createBtn=document.getElementById('createBtn');
+const breakBtn=document.getElementById('breakBtn');
 const deleteBtn=document.getElementById('deleteBtn');
 const sidebarToggle=document.getElementById('sidebarToggle');
 const sidebarShutdown=document.getElementById('sidebarShutdown');
@@ -125,6 +127,7 @@ const selectedInstances=new Set();
 const fightCache={};
 let selectedNone=new Set();
 let currentInstanceId=null;
+let openInstanceId=null;
 let summaryMode=false;
 
 
@@ -203,13 +206,20 @@ function enableDragSelection(tbody){
 function updateHeaderButtons(){
   if(summaryMode){
     createBtn.style.display='none';
+    breakBtn.style.display='none';
     deleteBtn.style.display='none';
   } else if(currentInstanceId){
     createBtn.style.display='none';
+    breakBtn.style.display='inline-block';
     deleteBtn.style.display='inline-block';
     deleteBtn.dataset.id=currentInstanceId;
+  } else if(openInstanceId){
+    createBtn.style.display='none';
+    breakBtn.style.display='inline-block';
+    deleteBtn.style.display='none';
   } else {
     createBtn.style.display='none';
+    breakBtn.style.display='none';
     deleteBtn.style.display='none';
   }
 }
@@ -235,6 +245,9 @@ async function loadInstances(){
 }
 async function showInstances(list){
   list.sort((a,b)=>new Date(b.startTime)-new Date(a.startTime));
+  openInstanceId=null;
+  const open=list.find(i=>i.durationSeconds===null);
+  if(open) openInstanceId=open.id;
   selectedInstances.clear();
   instancesDiv.innerHTML='';
   instanceStarts={};
@@ -268,6 +281,7 @@ async function showInstances(list){
       updateInstanceSelection(cb.closest('tr'), state);
     });
   });
+  updateHeaderButtons();
 }
 function closeInstance(id){
   fetch(`/api/instances/${id}/close`,{method:'POST'}).then(()=>loadInstances());
@@ -386,6 +400,12 @@ function openCreateInstanceModal(){
   document.getElementById('instanceEnd').value=end.toISOString().slice(0,16);
   document.getElementById('createInstanceModal').classList.add('show');
 }
+function openBreakModal(){
+  const now=new Date().toISOString().slice(0,16);
+  document.getElementById('breakStart').value=now;
+  document.getElementById('breakEnd').value=now;
+  document.getElementById('breakModal').classList.add('show');
+}
 document.getElementById('confirmCreateInstance').addEventListener('click',async ()=>{
   const name=document.getElementById('instanceName').value;
   const difficulty=parseInt(document.getElementById('instanceDifficulty').value);
@@ -411,7 +431,25 @@ document.getElementById('closeCreateInstanceModal').addEventListener('click',()=
 document.getElementById('cancelCreateInstance').addEventListener('click',()=>{
   document.getElementById('createInstanceModal').classList.remove('show');
 });
+document.getElementById('confirmBreak').addEventListener('click',async ()=>{
+  const start=document.getElementById('breakStart').value;
+  const end=document.getElementById('breakEnd').value;
+  await fetch('/api/breaks',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({startTime:start,endTime:end})
+  });
+  document.getElementById('breakModal').classList.remove('show');
+  loadInstances();
+});
+document.getElementById('closeBreakModal').addEventListener('click',()=>{
+  document.getElementById('breakModal').classList.remove('show');
+});
+document.getElementById('cancelBreak').addEventListener('click',()=>{
+  document.getElementById('breakModal').classList.remove('show');
+});
 createBtn.addEventListener('click',openCreateInstanceModal);
+breakBtn.addEventListener('click',openBreakModal);
 deleteBtn.addEventListener('click',async ()=>{
   const id=deleteBtn.dataset.id;
   if(!id) return;
@@ -486,6 +524,26 @@ summaryBtn.addEventListener('click',async ()=>{
     <div class="button-row" style="margin-top: 16px;">
       <button type="button" id="confirmCreateInstance" class="btn btn-primary">Zapisz</button>
       <button type="button" id="cancelCreateInstance" class="btn btn-secondary">Anuluj</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="breakModal" tabindex="-1">
+  <div class="form-card">
+    <button type="button" id="closeBreakModal" class="btn-close" aria-label="Close" style="align-self:flex-end;"></button>
+    <h2 class="form-title">Dodaj przerwę</h2>
+    <div class="datetime-row">
+      <div class="form-group">
+        <label class="form-label" for="breakStart">Start</label>
+        <input type="datetime-local" id="breakStart" class="form-control">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="breakEnd">Koniec</label>
+        <input type="datetime-local" id="breakEnd" class="form-control">
+      </div>
+    </div>
+    <div class="button-row" style="margin-top: 16px;">
+      <button type="button" id="confirmBreak" class="btn btn-primary">Zapisz</button>
+      <button type="button" id="cancelBreak" class="btn btn-secondary">Anuluj</button>
     </div>
   </div>
 </div>
