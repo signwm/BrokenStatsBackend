@@ -23,6 +23,7 @@ public class FightsController(AppDbContext db, ILogger<FightsController> logger)
         try
         {
         var query = _db.Fights
+            .Include(f => f.Instance)
             .Include(f => f.Opponents).ThenInclude(o => o.OpponentType)
             .Include(f => f.Drops).ThenInclude(d => d.DropItem).ThenInclude(di => di.DropType)
             .AsQueryable();
@@ -68,7 +69,9 @@ public class FightsController(AppDbContext db, ILogger<FightsController> logger)
                         var amount = d.Quantity > 1 ? $" ({d.Quantity})" : "";
                         return $"{d.DropItem.Name}{quality}{amount}";
                     })
-            )
+            ),
+            InstanceName = fight.Instance != null ? fight.Instance.Name : null,
+            InstanceId = fight.InstanceId
         }).ToList();
 
         if (!string.IsNullOrWhiteSpace(search))
@@ -251,6 +254,30 @@ public class FightsController(AppDbContext db, ILogger<FightsController> logger)
             _logger.LogError(ex, "Failed to get summary by ids");
             throw;
         }
+    }
+
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateFight(Guid id, [FromBody] UpdateFightDto dto)
+    {
+        var fight = await _db.Fights.FirstOrDefaultAsync(f => f.PublicId == id);
+        if (fight == null) return NotFound();
+        fight.Time = dto.Time;
+        fight.Gold = dto.Gold;
+        fight.Psycho = dto.Psycho;
+        fight.Exp = dto.Exp;
+        fight.InstanceId = dto.InstanceId;
+        await _db.SaveChangesAsync();
+        return Ok();
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteFight(Guid id)
+    {
+        var fight = await _db.Fights.FirstOrDefaultAsync(f => f.PublicId == id);
+        if (fight == null) return NotFound();
+        _db.Fights.Remove(fight);
+        await _db.SaveChangesAsync();
+        return Ok();
     }
 
 
