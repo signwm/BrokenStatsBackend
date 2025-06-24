@@ -15,6 +15,19 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
     private readonly AppDbContext _db = db;
     private readonly ILogger<InstancesController> _logger = logger;
 
+    private async Task<int> GetBreakSecondsAsync(DateTime start, DateTime end)
+    {
+        var list = await _db.Breaks
+            .Where(b => b.StartTime < end && b.EndTime > start)
+            .ToListAsync();
+        return list.Sum(b =>
+        {
+            var from = b.StartTime > start ? b.StartTime : start;
+            var to = b.EndTime < end ? b.EndTime : end;
+            return (int)(to - from).TotalSeconds;
+        });
+    }
+
     [HttpGet("days")]
     public async Task<IActionResult> GetDays()
     {
@@ -189,18 +202,23 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
             })
             .ToList();
 
-        var perRun = finishedInstances
-            .Join(fightTotals, i => i.Id, f => f.InstanceId, (i, f) => new
+        var perRun = new List<dynamic>();
+        foreach (var i in finishedInstances)
+        {
+            var f = fightTotals.First(ft => ft.InstanceId == i.Id);
+            int breakSec = await GetBreakSecondsAsync(i.StartTime, i.EndTime!.Value);
+            var dur = (int)(i.EndTime!.Value - i.StartTime).TotalSeconds - breakSec;
+            perRun.Add(new
             {
                 i.Name,
                 i.Difficulty,
-                Duration = (i.EndTime!.Value - i.StartTime).TotalSeconds,
+                Duration = dur < 0 ? 0 : dur,
                 f.Gold,
                 f.Exp,
                 f.Psycho,
                 f.DropValue
-            })
-            .ToList();
+            });
+        }
 
         var stats = perRun
             .GroupBy(p => new { p.Name, p.Difficulty })
@@ -318,14 +336,23 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
                     .ThenInclude(di => di.DropType)
             .ToListAsync();
 
-        var result = instances.Select(i =>
+        var result = new List<object>();
+        foreach (var i in instances)
         {
             var f = fights.Where(x => x.InstanceId == i.Id).ToList();
             int gold = f.Sum(x => x.Gold);
             int exp = f.Sum(x => x.Exp);
             int psycho = f.Sum(x => x.Psycho);
             int drop = f.SelectMany(x => x.Drops).Sum(d => FightsController.GetDropValueStatic(d));
-            return new
+            int? duration = null;
+            if (i.EndTime != null)
+            {
+                int breakSec = await GetBreakSecondsAsync(i.StartTime, i.EndTime.Value);
+                int dur = (int)(i.EndTime.Value - i.StartTime).TotalSeconds - breakSec;
+                if (dur < 0) dur = 0;
+                duration = dur;
+            }
+            result.Add(new
             {
                 id = i.Id,
                 startTime = i.StartTime,
@@ -336,9 +363,9 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
                 psycho,
                 profit = gold + drop,
                 fights = f.Count,
-                durationSeconds = i.EndTime != null ? (int?)(i.EndTime.Value - i.StartTime).TotalSeconds : null
-            };
-        }).ToList();
+                durationSeconds = duration
+            });
+        }
 
         return Ok(result);
     }
