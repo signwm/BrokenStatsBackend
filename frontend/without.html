@@ -93,6 +93,7 @@
         </label>
         <button id="prevDayBtn" class="button nav-button">&lt;</button>
         <button id="nextDayBtn" class="button nav-button">&gt;</button>
+        <input id="searchBox" type="text" placeholder="Szukaj..." style="margin-left:10px;">
       </div>
     </div>
     <div id="details" style="display:none;">
@@ -115,6 +116,7 @@ const sidebarShutdown=document.getElementById('sidebarShutdown');
 const fightsDiv=document.getElementById('fights');
 const summaryDiv=document.getElementById('detailSummary');
 const detailsDiv=document.getElementById('details');
+const searchBox=document.getElementById('searchBox');
 let fights=[];
 const selected=new Set();
 
@@ -142,6 +144,31 @@ function createCsvButton(table, filename){
   return btn;
 }
 
+function parseSearchQuery(q){
+  const regex=/"([^"]+)"|([^\s"]+)/g;
+  const terms=[];let m;
+  while((m=regex.exec(q))!==null){
+    const t=m[1]||m[2];
+    if(t.toLowerCase()==='or') continue;
+    terms.push(t.toLowerCase());
+  }
+  return terms;
+}
+
+function filterList(list, terms){
+  if(terms.length===0) return list.slice();
+  return list.filter(item=>{
+    const values=Object.values(item).map(v=>String(v).toLowerCase());
+    return terms.some(term=>values.some(v=>v.includes(term)));
+  });
+}
+
+function applySearch(){
+  const terms=parseSearchQuery(searchBox.value);
+  const filtered=filterList(fights,terms);
+  renderFights(filtered);
+}
+
 function updateSelection(row,sel){
   if(sel){selected.add(row.dataset.id);row.classList.add('selected');}
   else{selected.delete(row.dataset.id);row.classList.remove('selected');}
@@ -165,19 +192,22 @@ function renderSummaryTo(el,s){
 }
 function toInputValue(dt){const off=dt.getTimezoneOffset();return new Date(dt.getTime()-off*60000).toISOString().slice(0,16);}
 function setDefaultRange(){const now=new Date();const s=new Date(now.getFullYear(),now.getMonth(),now.getDate(),0,0,0);const e=new Date(now.getFullYear(),now.getMonth(),now.getDate(),23,59,59);startInput.value=toInputValue(s);endInput.value=toInputValue(e);}
-async function loadFights(){
-  const from=startInput.value;const to=endInput.value;if(!from||!to)return;
-  fights=await fetch(`/api/instances/without/fights?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`).then(r=>r.json());
-  fights.sort((a,b)=>new Date(b.time)-new Date(a.time));
-  selected.clear();
+function renderFights(list){
   const table=document.createElement('table');table.className='custom-dark-table';table.innerHTML=`<thead><tr><th class="nowrap">Data</th><th>Złoto</th><th>Exp</th><th>Psycho</th><th>Przeciwnicy</th><th>Drop</th></tr></thead>`;
   const tbody=document.createElement('tbody');
-  fights.forEach(f=>{const tr=document.createElement('tr');tr.dataset.id=f.id;tr.innerHTML=`<td class="nowrap">${formatDate(new Date(f.time))}</td><td>${f.gold}</td><td>${f.exp}</td><td>${f.psycho}</td><td class="truncate" title="${f.opponents}">${f.opponents}</td><td class="truncate" title="${f.drops}">${f.drops}</td>`;tbody.appendChild(tr);});
+  list.forEach(f=>{const tr=document.createElement('tr');tr.dataset.id=f.id;tr.innerHTML=`<td class="nowrap">${formatDate(new Date(f.time))}</td><td>${f.gold}</td><td>${f.exp}</td><td>${f.psycho}</td><td class="truncate" title="${f.opponents}">${f.opponents}</td><td class="truncate" title="${f.drops}">${f.drops}</td>`;tbody.appendChild(tr);});
   table.appendChild(tbody);
   fightsDiv.innerHTML='';
   fightsDiv.appendChild(table);
   fightsDiv.appendChild(createCsvButton(table,'walki.csv'));
   enableDragSelection(tbody);
+}
+async function loadFights(){
+  const from=startInput.value;const to=endInput.value;if(!from||!to)return;
+  fights=await fetch(`/api/instances/without/fights?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`).then(r=>r.json());
+  fights.sort((a,b)=>new Date(b.time)-new Date(a.time));
+  selected.clear();
+  applySearch();
 }
 function saveRange(){localStorage.setItem('startTime',startInput.value);localStorage.setItem('endTime',endInput.value);}
 startInput.addEventListener('change',()=>{saveRange();loadFights();});
@@ -185,6 +215,7 @@ endInput.addEventListener('change',()=>{saveRange();loadFights();});
 todayBtn.addEventListener('click',()=>{setDefaultRange();saveRange();loadFights();});
 prevDayBtn.addEventListener('click',()=>{const s=new Date(startInput.value);const e=new Date(endInput.value);s.setDate(s.getDate()-1);e.setDate(e.getDate()-1);startInput.value=toInputValue(s);endInput.value=toInputValue(e);saveRange();loadFights();});
 nextDayBtn.addEventListener('click',()=>{const s=new Date(startInput.value);const e=new Date(endInput.value);s.setDate(s.getDate()+1);e.setDate(e.getDate()+1);startInput.value=toInputValue(s);endInput.value=toInputValue(e);saveRange();loadFights();});
+searchBox.addEventListener('input',applySearch);
 sidebarToggle.addEventListener('click',()=>{document.getElementById('sidebar').classList.toggle('collapsed');});
 sidebarShutdown.addEventListener('click',()=>{
   if(confirm('Czy na pewno chcesz zamknąć aplikację?')){

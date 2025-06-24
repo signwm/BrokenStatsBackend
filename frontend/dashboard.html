@@ -95,6 +95,7 @@
         </label>
         <button id="prevDayBtn" class="button nav-button">&lt;</button>
         <button id="nextDayBtn" class="button nav-button">&gt;</button>
+        <input id="searchBox" type="text" placeholder="Szukaj..." style="margin-left:10px;">
       </div>
     </div>
   <div id="instances"></div>
@@ -122,6 +123,7 @@ const instancesDiv=document.getElementById('instances');
 const detailsDiv=document.getElementById('details');
 const summaryDiv=document.getElementById('detailSummary');
 const fightsDiv=document.getElementById('fights');
+const searchBox=document.getElementById('searchBox');
 let instanceStarts={};
 const selectedInstances=new Set();
 const fightCache={};
@@ -129,6 +131,9 @@ let selectedNone=new Set();
 let currentInstanceId=null;
 let openInstanceId=null;
 let summaryMode=false;
+let allInstances=[];
+let currentFights=[];
+let currentStartTime=null;
 
 
 function downloadTableAsCSV(table, filename){
@@ -153,6 +158,26 @@ function createCsvButton(table, filename){
   btn.className='csv-button';
   btn.addEventListener('click',()=>downloadTableAsCSV(table, filename));
   return btn;
+}
+
+function parseSearchQuery(q){
+  const regex=/"([^"]+)"|([^\s"]+)/g;
+  const terms=[];
+  let m;
+  while((m=regex.exec(q))!==null){
+    const t=m[1]||m[2];
+    if(t.toLowerCase()==='or') continue;
+    terms.push(t.toLowerCase());
+  }
+  return terms;
+}
+
+function filterList(list, terms){
+  if(terms.length===0) return list.slice();
+  return list.filter(item=>{
+    const values=Object.values(item).map(v=>String(v).toLowerCase());
+    return terms.some(term=>values.some(val=>val.includes(term)));
+  });
 }
 
 function updateNoneSelection(row, selected){
@@ -240,10 +265,44 @@ async function loadFights(id){
 async function loadInstances(){
   const from=startInput.value;const to=endInput.value;
   if(!from||!to)return;
-  const inst = await fetch(`/api/instances/range?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`).then(r=>r.json());
-  showInstances(inst);
+  allInstances = await fetch(`/api/instances/range?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`).then(r=>r.json());
+  applySearch();
 }
-async function showInstances(list){
+
+function renderFights(list){
+  const table=document.createElement('table');
+  table.className='custom-dark-table';
+  table.innerHTML=`<thead><tr><th class="nowrap">Data</th><th>Złoto</th><th>Exp</th><th>Psycho</th><th>Przeciwnicy</th><th>Drop</th></tr></thead>`;
+  const tbody=document.createElement('tbody');
+  list.forEach(f=>{
+    const time=currentInstanceId==='none'?new Date(f.time):new Date(new Date(currentStartTime).getTime()+f.offsetSeconds*1000);
+    const tr=document.createElement('tr');
+    tr.dataset.id=f.id;
+    tr.innerHTML=`<td class="nowrap">${formatDate(time)}</td><td>${f.gold}</td><td>${f.exp}</td><td>${f.psycho}</td><td class="truncate" title="${f.opponents}">${f.opponents}</td><td class="truncate" title="${f.drops}">${f.drops}</td>`;
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  fightsDiv.innerHTML='';
+  fightsDiv.appendChild(table);
+  fightsDiv.appendChild(createCsvButton(table,'walki.csv'));
+  if(currentInstanceId==='none'){
+    selectedNone=new Set();
+    enableDragSelection(tbody);
+  }
+}
+
+function applySearch(){
+  const terms=parseSearchQuery(searchBox.value);
+  if(detailsDiv.style.display==='block'){
+    const filtered=filterList(currentFights,terms);
+    renderFights(filtered);
+  }else{
+    const filtered=filterList(allInstances,terms);
+    renderInstances(filtered);
+  }
+  updateHeaderButtons();
+}
+function renderInstances(list){
   list.sort((a,b)=>new Date(b.startTime)-new Date(a.startTime));
   openInstanceId=null;
   const open=list.find(i=>i.durationSeconds===null);
@@ -295,27 +354,14 @@ function showDetails(id){
       if(id==='none') return new Date(b.time)-new Date(a.time);
       return b.offsetSeconds-a.offsetSeconds;
     });
+    currentFights=list;
+    currentStartTime=start;
     const ids=list.map(f=>f.id);
     fetch('/api/fights/summary',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(ids)})
       .then(r=>r.json()).then(s=>renderSummaryTo(summaryDiv,s));
-    const table=document.createElement('table');
-    table.className='custom-dark-table';
-    table.innerHTML=`<thead><tr><th class="nowrap">Data</th><th>Złoto</th><th>Exp</th><th>Psycho</th><th>Przeciwnicy</th><th>Drop</th></tr></thead>`;
-    const tbody=document.createElement('tbody');
-    list.forEach(f=>{
-      const time=id==='none'?new Date(f.time):new Date(new Date(start).getTime()+f.offsetSeconds*1000);
-      const tr=document.createElement('tr');
-      tr.dataset.id=f.id;
-      tr.innerHTML=`<td class="nowrap">${formatDate(time)}</td><td>${f.gold}</td><td>${f.exp}</td><td>${f.psycho}</td><td class="truncate" title="${f.opponents}">${f.opponents}</td><td class="truncate" title="${f.drops}">${f.drops}</td>`;
-      tbody.appendChild(tr);
-    });
-    table.appendChild(tbody);
-    fightsDiv.innerHTML='';
-    fightsDiv.appendChild(table);
-    fightsDiv.appendChild(createCsvButton(table,'walki.csv'));
+    applySearch();
     if(id==='none'){
       selectedNone=new Set();
-      enableDragSelection(tbody);
     }
     instancesDiv.style.display='none';
     detailsDiv.style.display='block';
@@ -349,7 +395,7 @@ backBtn.addEventListener('click',()=>{
   summaryBtn.style.display='inline-block';
   currentInstanceId=null;
   summaryMode=false;
-  updateHeaderButtons();
+  applySearch();
 });
 function toInputValue(dt){
   const off=dt.getTimezoneOffset();
@@ -474,6 +520,7 @@ prevDayBtn.addEventListener('click',()=>{
 nextDayBtn.addEventListener('click',()=>{
   const s=new Date(startInput.value);const e=new Date(endInput.value);s.setDate(s.getDate()+1);e.setDate(e.getDate()+1);startInput.value=toInputValue(s);endInput.value=toInputValue(e);saveRange();loadInstances();
 });
+searchBox.addEventListener('input',applySearch);
 summaryBtn.addEventListener('click',async ()=>{
   if(selectedInstances.size===0){alert('Nic nie zaznaczono');return;}
   const ids=[];for(const id of selectedInstances){const fights=await loadFights(id);ids.push(...fights.map(f=>f.id));}
