@@ -8,4 +8,3 @@ public class UpdateFightDto
     public int Exp { get; set; }
     public int? InstanceId { get; set; }
 }
-

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Linq;
 
 namespace BrokenStatsBackend.src.Controllers;
 
@@ -393,4 +394,3 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
         _ => 5
     };
 }
-

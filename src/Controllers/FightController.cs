@@ -309,25 +309,51 @@ public class FightsController(AppDbContext db, ILogger<FightsController> logger)
         return Config.TrashDefaultPrice;
     }
 
+    private static int GetUnitPrice(DropEntity drop)
+    {
+        string type = drop.DropItem.DropType.Type.ToLower();
+        return type switch
+        {
+            "synergetic" => GetSynergeticPrice(drop.DropItem.Name),
+            "trash" => GetTrashPrice(drop.DropItem.Quality),
+            _ => drop.DropItem.Value.GetValueOrDefault()
+        };
+    }
+
     private static List<object> GroupByName(IEnumerable<DropEntity> drops) =>
         drops
             .GroupBy(d => d.DropItem.Name)
             .OrderByDescending(g => g.Sum(d => d.Quantity))
-            .Select(g => (object)new { name = g.Key, count = g.Sum(d => d.Quantity) })
+            .Select(g => (object)new
+            {
+                name = g.Key,
+                count = g.Sum(d => d.Quantity),
+                price = GetUnitPrice(g.First())
+            })
             .ToList();
 
     private static List<object> GroupByQuality(IEnumerable<DropEntity> drops) =>
         drops
             .GroupBy(d => d.DropItem.Quality ?? "?")
             .OrderByDescending(g => g.Sum(d => d.Quantity))
-            .Select(g => (object)new { name = g.Key, count = g.Sum(d => d.Quantity) })
+            .Select(g => (object)new
+            {
+                name = g.Key,
+                count = g.Sum(d => d.Quantity),
+                price = GetUnitPrice(g.First())
+            })
             .ToList();
 
     private static List<object> GroupBySynergeticSuffix(IEnumerable<DropEntity> drops) =>
         drops
             .GroupBy(d => d.DropItem.Name.Split(' ').Last())
             .OrderByDescending(g => g.Sum(d => d.Quantity))
-            .Select(g => (object)new { name = g.Key, count = g.Sum(d => d.Quantity) })
+            .Select(g => (object)new
+            {
+                name = g.Key,
+                count = g.Sum(d => d.Quantity),
+                price = GetUnitPrice(g.First())
+            })
             .ToList();
 
 

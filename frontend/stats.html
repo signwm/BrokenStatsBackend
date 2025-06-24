@@ -23,12 +23,14 @@
   </div>
   <div class="content">
     <h1>Statystyki instancji</h1>
+    <input id="searchBox" type="text" placeholder="Szukaj..." style="margin-bottom:10px;">
     <div id="statsTableContainer" style="width:100%;"></div>
   </div>
 <script>
 document.addEventListener('DOMContentLoaded',()=>{
   const sidebarToggle = document.getElementById('sidebarToggle');
   const sidebarShutdown = document.getElementById('sidebarShutdown');
+  const searchBox = document.getElementById('searchBox');
   sidebarToggle.addEventListener('click', () => { document.getElementById('sidebar').classList.toggle('collapsed'); });
   sidebarShutdown.addEventListener('click', () => {
     if(confirm('Czy na pewno chcesz zamknąć aplikację?')){
@@ -59,8 +61,16 @@ document.addEventListener('DOMContentLoaded',()=>{
     btn.addEventListener('click', () => downloadTableAsCSV(table, filename));
     return btn;
   }
-  fetch('/api/instances/stats').then(r=>r.json()).then(showStats);
-  function showStats(list){
+  function parseSearchQuery(q){
+    const regex=/"([^"]+)"|([^\s"]+)/g;
+    const terms=[];let m;while((m=regex.exec(q))!==null){const t=m[1]||m[2];if(t.toLowerCase()==='or')continue;terms.push(t.toLowerCase());}return terms;
+  }
+  function filterList(list,terms){
+    if(terms.length===0) return list.slice();
+    return list.filter(i=>{const vals=Object.values(i).map(v=>String(v).toLowerCase());return terms.some(t=>vals.some(v=>v.includes(t)));});
+  }
+  let statsData=[];
+  function renderStats(list){
     const table=document.createElement('table');
     table.className='custom-dark-table';
     table.innerHTML=`<thead><tr><th>Nazwa</th><th>Trudność</th><th>Ilość</th><th>Śr. czas</th><th>Śr. złoto</th><th>Śr. exp</th><th>Śr. psycho</th><th>Śr. zysk</th></tr></thead>`;
@@ -73,9 +83,16 @@ document.addEventListener('DOMContentLoaded',()=>{
     });
     table.appendChild(tbody);
     const container=document.getElementById('statsTableContainer');
+    container.innerHTML='';
     container.appendChild(table);
     container.appendChild(createCsvButton(table,'statystyki.csv'));
   }
+  function applySearch(){
+    const terms=parseSearchQuery(searchBox.value);
+    renderStats(filterList(statsData,terms));
+  }
+  fetch('/api/instances/stats').then(r=>r.json()).then(list=>{statsData=list;applySearch();});
+  searchBox.addEventListener('input',applySearch);
 });
 </script>
 </body>
