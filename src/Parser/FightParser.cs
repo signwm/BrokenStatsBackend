@@ -28,7 +28,7 @@ namespace BrokenStatsBackend.src.Parser
 
         public static RawFightData ParseRawFight(DateTime timestamp, string playerName, string rawData)
         {
-            var split = rawData.Split('$');
+            var split = rawData.Split(["[--]"], StringSplitOptions.None);
             var result = new RawFightData { Time = timestamp };
             bool playerDataAdded = false;
 
