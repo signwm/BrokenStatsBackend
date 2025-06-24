@@ -285,6 +285,19 @@ public class InstancesController(AppDbContext db, ILogger<InstancesController> l
 
     }
 
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateInstance(int id, [FromBody] CreateInstanceDto dto)
+    {
+        var instance = await _db.Instances.FindAsync(id);
+        if (instance == null) return NotFound();
+        instance.Name = dto.Name;
+        instance.Difficulty = dto.Difficulty;
+        instance.StartTime = dto.StartTime;
+        instance.EndTime = dto.EndTime;
+        await _db.SaveChangesAsync();
+        return Ok();
+    }
+
     [HttpPost("closeLast")]
     public async Task<IActionResult> CloseLastInstance()
     {

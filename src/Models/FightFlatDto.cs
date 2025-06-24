@@ -10,5 +10,7 @@ namespace BrokenStatsBackend.src.Models
         public int DropValue { get; set; }
         public string Opponents { get; set; } = string.Empty;
         public string Drops { get; set; } = string.Empty;
+        public string? InstanceName { get; set; }
+        public int? InstanceId { get; set; }
     }
 }
