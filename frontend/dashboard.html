@@ -332,7 +332,11 @@ function showDetails(id){
 }
 function renderSummaryTo(el,s){
   const card=(t,v)=>`<div class="card"><h3>${t}</h3><div class="value">${v}</div></div>`;
-  const drops=list=>list.map(d=>`<div class="line-item"><span class="label">${d.name}</span><span class="value">${d.count.toLocaleString()}</span></div>`).join('');
+  const drops=list=>list.map(d=>{
+    const count=d.count.toLocaleString();
+    const price=d.price.toLocaleString();
+    return `<div class="line-item"><span class="label">${d.name}</span><span class="value">${count} x ${price}</span></div>`;
+  }).join('');
   const dropVals={};Object.entries(s.dropValuesPerType).forEach(([k,v])=>dropVals[k.toLowerCase()]=v);
   const dropCard=(t,l,v)=>`<div class="card"><h3>${t}</h3>${drops(l)}<div class="total-value">= ${v.toLocaleString()}</div></div>`;
   el.innerHTML=`<div class="stats-row">${card('Exp',s.totalExp.toLocaleString())}${card('Psycho',s.totalPsycho.toLocaleString())}${card('Złoto',s.totalGold.toLocaleString())}${card('Zarobek',s.totalGoldWithDrops.toLocaleString())}${card('Walki',s.fightsCount.toLocaleString())}${card('Czas',formatDuration(Math.floor((new Date(s.sessionEnd)-new Date(s.sessionStart))/1000)))}</div><div class="drops-grid">${dropCard('Rary',s.rare,dropVals['rare']||0)}${dropCard('Użytkowe',s.items,dropVals['item']||0)}${dropCard('Białe',s.trash,dropVals['trash']||0)}${dropCard('Syngi',s.synergetics,dropVals['synergetic']||0)}${dropCard('Drify',s.drifs,dropVals['drif']||0)}${dropCard('Orby',[],0)}</div>`;
