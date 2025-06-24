@@ -13,6 +13,7 @@ namespace BrokenStatsBackend.src.Database
         public DbSet<DropItemEntity> DropItems => Set<DropItemEntity>();
         public DbSet<DropTypeEntity> DropTypes => Set<DropTypeEntity>();
         public DbSet<InstanceEntity> Instances => Set<InstanceEntity>();
+        public DbSet<BreakEntity> Breaks => Set<BreakEntity>();
 
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
@@ -27,9 +28,16 @@ namespace BrokenStatsBackend.src.Database
             modelBuilder.Entity<DropItemEntity>().HasIndex(x => new { x.Name, x.Quality }).IsUnique();
             modelBuilder.Entity<FightEntity>().HasIndex(f => f.PublicId).IsUnique();
             modelBuilder.Entity<FightEntity>().Property(f => f.Time).HasColumnType("DATETIME");
+            modelBuilder.Entity<FightEntity>()
+                .HasOne(f => f.Instance)
+                .WithMany()
+                .HasForeignKey(f => f.InstanceId)
+                .OnDelete(DeleteBehavior.SetNull);
             modelBuilder.Entity<InstanceEntity>().HasIndex(i => i.InstanceId).IsUnique();
             modelBuilder.Entity<InstanceEntity>().Property(i => i.StartTime).HasColumnType("DATETIME");
             modelBuilder.Entity<InstanceEntity>().Property(i => i.EndTime).HasColumnType("DATETIME");
+            modelBuilder.Entity<BreakEntity>().Property(b => b.StartTime).HasColumnType("DATETIME");
+            modelBuilder.Entity<BreakEntity>().Property(b => b.EndTime).HasColumnType("DATETIME");
 
         }
     }

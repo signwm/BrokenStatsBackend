@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Zapisane przerwy</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="with-sidebar">
+  <div class="sidebar" id="sidebar">
+    <button class="toggle" id="sidebarToggle">☰</button>
+    <ul>
+      <li><a href="dashboard.html"><span>Lista Instancji</span></a></li>
+      <li><a href="stats.html"><span>Statystyki instancji</span></a></li>
+      <li><a href="fights.html"><span>Lista Walk</span></a></li>
+      <li><a href="without.html"><span>Walki bez instancji</span></a></li>
+      <li><a href="breaks.html"><span>Zapisane przerwy</span></a></li>
+    </ul>
+    <button id="sidebarShutdown"><span>Zamknij aplikację</span></button>
+  </div>
+  <div class="content">
+    <h1>Zapisane przerwy</h1>
+    <div class="controls sticky-controls">
+      <div class="controls-top-row">
+        <button id="addBtn" class="button primary-button">Dodaj przerwę</button>
+        <button id="editBtn" class="button standard-button" style="display:none;">Edytuj</button>
+        <button id="delBtn" class="end-button" style="display:none;">Usuń</button>
+      </div>
+    </div>
+    <div id="breaksTable"></div>
+  </div>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+  const sidebarToggle=document.getElementById('sidebarToggle');
+  const sidebarShutdown=document.getElementById('sidebarShutdown');
+  const addBtn=document.getElementById('addBtn');
+  const editBtn=document.getElementById('editBtn');
+  const delBtn=document.getElementById('delBtn');
+  const tableDiv=document.getElementById('breaksTable');
+  let breaks=[];
+  let selectedId=null;
+
+  sidebarToggle.addEventListener('click',()=>document.getElementById('sidebar').classList.toggle('collapsed'));
+  sidebarShutdown.addEventListener('click',()=>{if(confirm('Czy na pewno chcesz zamknąć aplikację?')){fetch('/api/shutdown',{method:'POST'}).then(()=>window.close());}});
+
+  function updateButtons(){
+    editBtn.style.display=selectedId? 'inline-block':'none';
+    delBtn.style.display=selectedId? 'inline-block':'none';
+  }
+
+  async function load(){
+    breaks=await fetch('/api/breaks').then(r=>r.json());
+    breaks.sort((a,b)=>new Date(b.startTime)-new Date(a.startTime));
+    const table=document.createElement('table');
+    table.className='custom-dark-table';
+    table.innerHTML=`<thead><tr><th>Start</th><th>Koniec</th><th>Instancja</th></tr></thead>`;
+    const tbody=document.createElement('tbody');
+    breaks.forEach(b=>{
+      const tr=document.createElement('tr');
+      tr.dataset.id=b.id;
+      tr.innerHTML=`<td class="nowrap">${new Date(b.startTime).toLocaleString()}</td><td class="nowrap">${new Date(b.endTime).toLocaleString()}</td><td>${b.instance||'brak'}</td>`;
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    tableDiv.innerHTML='';
+    tableDiv.appendChild(table);
+    tbody.querySelectorAll('tr').forEach(tr=>tr.addEventListener('click',()=>{
+      if(selectedId===tr.dataset.id){tr.classList.remove('selected');selectedId=null;}else{tbody.querySelectorAll('tr').forEach(r=>r.classList.remove('selected'));tr.classList.add('selected');selectedId=tr.dataset.id;}updateButtons();}));
+    updateButtons();
+  }
+
+  function openModal(b){
+    document.getElementById('breakStart').value=b?b.startTime.slice(0,16):new Date().toISOString().slice(0,16);
+    document.getElementById('breakEnd').value=b?b.endTime.slice(0,16):new Date().toISOString().slice(0,16);
+    document.getElementById('breakModal').dataset.id=b?b.id:'';
+    document.getElementById('breakModal').classList.add('show');
+  }
+
+  addBtn.addEventListener('click',()=>openModal(null));
+  editBtn.addEventListener('click',()=>{
+    const b=breaks.find(x=>x.id==selectedId);if(b)openModal({id:b.id,startTime:b.startTime,endTime:b.endTime});
+  });
+  delBtn.addEventListener('click',async ()=>{if(!selectedId)return;if(!confirm('Usunąć?'))return;await fetch(`/api/breaks/${selectedId}`,{method:'DELETE'});selectedId=null;load();});
+
+  document.getElementById('confirmBreak').addEventListener('click',async ()=>{
+    const id=document.getElementById('breakModal').dataset.id;
+    const start=document.getElementById('breakStart').value;
+    const end=document.getElementById('breakEnd').value;
+    if(id){await fetch(`/api/breaks/${id}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({startTime:start,endTime:end})});}
+    else{await fetch('/api/breaks',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({startTime:start,endTime:end})});}
+    document.getElementById('breakModal').classList.remove('show');
+    load();
+  });
+  document.getElementById('cancelBreak').addEventListener('click',()=>document.getElementById('breakModal').classList.remove('show'));
+  document.getElementById('closeBreakModal').addEventListener('click',()=>document.getElementById('breakModal').classList.remove('show'));
+
+  load();
+});
+</script>
+<div class="modal" id="breakModal" tabindex="-1">
+  <div class="form-card">
+    <button type="button" id="closeBreakModal" class="btn-close" aria-label="Close" style="align-self:flex-end;"></button>
+    <h2 class="form-title">Przerwa</h2>
+    <div class="datetime-row">
+      <div class="form-group">
+        <label class="form-label" for="breakStart">Start</label>
+        <input type="datetime-local" id="breakStart" class="form-control">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="breakEnd">Koniec</label>
+        <input type="datetime-local" id="breakEnd" class="form-control">
+      </div>
+    </div>
+    <div class="button-row" style="margin-top: 16px;">
+      <button type="button" id="confirmBreak" class="btn btn-primary">Zapisz</button>
+      <button type="button" id="cancelBreak" class="btn btn-secondary">Anuluj</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Broken Stats</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .controls{display:flex;gap:10px;margin-bottom:10px;justify-content:center;align-items:center;}
+    .sticky-controls{position:sticky;top:0;z-index:100;background-color:#121212;padding:10px;width:100%;}
+  </style>
+</head>
+<body class="with-sidebar">
+  <div class="sidebar" id="sidebar">
+    <button class="toggle" id="sidebarToggle">☰</button>
+    <ul>
+      <li><a href="dashboard.html"><span>Lista Instancji</span></a></li>
+      <li><a href="stats.html"><span>Statystyki instancji</span></a></li>
+      <li><a href="fights.html"><span>Lista Walk</span></a></li>
+      <li><a href="without.html"><span>Walki bez instancji</span></a></li>
+      <li><a href="breaks.html"><span>Zapisane przerwy</span></a></li>
+    </ul>
+    <button id="sidebarShutdown"><span>Zamknij aplikację</span></button>
+  </div>
+  <div class="content">
+    <h1>Statystyki instancji</h1>
+    <input id="searchBox" type="text" placeholder="Szukaj..." style="margin-bottom:10px;">
+    <div id="statsTableContainer" style="width:100%;"></div>
+  </div>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+  const sidebarToggle = document.getElementById('sidebarToggle');
+  const sidebarShutdown = document.getElementById('sidebarShutdown');
+  const searchBox = document.getElementById('searchBox');
+  sidebarToggle.addEventListener('click', () => { document.getElementById('sidebar').classList.toggle('collapsed'); });
+  sidebarShutdown.addEventListener('click', () => {
+    if(confirm('Czy na pewno chcesz zamknąć aplikację?')){
+      fetch('/api/shutdown', { method: 'POST' }).then(() => {
+        window.close();
+      });
+    }
+  });
+  function downloadTableAsCSV(table, filename) {
+    const rows = Array.from(table.querySelectorAll('tr')).map(tr =>
+      Array.from(tr.querySelectorAll('th,td')).map(td => {
+        let text = td.innerText.replace(/\n/g, ' ').trim();
+        text = text.replace(/"/g, '""');
+        return text.includes(',') || text.includes('"') ? `"${text}"` : text;
+      }).join(',')
+    ).join('\n');
+    const blob = new Blob([rows], { type: 'text/csv;charset=utf-8;' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+  function createCsvButton(table, filename) {
+    const btn = document.createElement('button');
+    btn.textContent = 'Pobierz CSV';
+    btn.className = 'csv-button';
+    btn.addEventListener('click', () => downloadTableAsCSV(table, filename));
+    return btn;
+  }
+  function parseSearchQuery(q){
+    const regex=/"([^"]+)"|([^\s"]+)/g;
+    const terms=[];let m;while((m=regex.exec(q))!==null){const t=m[1]||m[2];if(t.toLowerCase()==='or')continue;terms.push(t.toLowerCase());}return terms;
+  }
+  function filterList(list,terms){
+    if(terms.length===0) return list.slice();
+    return list.filter(i=>{const vals=Object.values(i).map(v=>String(v).toLowerCase());return terms.some(t=>vals.some(v=>v.includes(t)));});
+  }
+  let statsData=[];
+  function renderStats(list){
+    const table=document.createElement('table');
+    table.className='custom-dark-table';
+    table.innerHTML=`<thead><tr><th>Nazwa</th><th>Trudność</th><th>Ilość</th><th>Śr. czas</th><th>Śr. złoto</th><th>Śr. exp</th><th>Śr. psycho</th><th>Śr. zysk</th></tr></thead>`;
+    const tbody=document.createElement('tbody');
+    list.forEach(s=>{
+      const diff=s.difficulty===3?'Trudna':s.difficulty===1?'Normalna':'Łatwa';
+      const tr=document.createElement('tr');
+      tr.innerHTML=`<td>${s.name}</td><td>${diff}</td><td>${s.count}</td><td>${s.avgTime}</td><td>${s.avgGold.toLocaleString()}</td><td>${s.avgExp.toLocaleString()}</td><td>${s.avgPsycho.toLocaleString()}</td><td>${s.avgProfit.toLocaleString()}</td>`;
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody);
+    const container=document.getElementById('statsTableContainer');
+    container.innerHTML='';
+    container.appendChild(table);
+    container.appendChild(createCsvButton(table,'statystyki.csv'));
+  }
+  function applySearch(){
+    const terms=parseSearchQuery(searchBox.value);
+    renderStats(filterList(statsData,terms));
+  }
+  fetch('/api/instances/stats').then(r=>r.json()).then(list=>{statsData=list;applySearch();});
+  searchBox.addEventListener('input',applySearch);
+});
+</script>
+</body>
+</html>

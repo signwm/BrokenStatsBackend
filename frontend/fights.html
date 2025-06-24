@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Lista Walk</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .sticky-controls {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background-color: #121212;
+      padding: 10px;
+      width: 100%;
+    }
+    .controls-top-row,
+    .controls-bottom-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .controls-top-row {
+      justify-content: center;
+      position: relative;
+    }
+    .left-controls {
+      position: absolute;
+      left: 0;
+      display: flex;
+      align-items: center;
+    }
+    .right-controls {
+      display: flex;
+      gap: 10px;
+    }
+    .controls-bottom-row {
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+    }
+    .controls-bottom-row label {
+      display: flex;
+      align-items: center;
+      color: #ccc;
+      font-size: 13px;
+      gap: 6px;
+    }
+    .controls-bottom-row input[type="datetime-local"] {
+      background-color: #2a2a2a;
+      color: #eee;
+      border: 1px solid #444;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    #details{width:100%;}
+  </style>
+</head>
+<body class="with-sidebar">
+  <div class="sidebar" id="sidebar">
+    <button class="toggle" id="sidebarToggle">☰</button>
+    <ul>
+      <li><a href="dashboard.html"><span>Lista Instancji</span></a></li>
+      <li><a href="stats.html"><span>Statystyki instancji</span></a></li>
+      <li><a href="fights.html"><span>Lista Walk</span></a></li>
+      <li><a href="without.html"><span>Walki bez instancji</span></a></li>
+      <li><a href="breaks.html"><span>Zapisane przerwy</span></a></li>
+    </ul>
+    <button id="sidebarShutdown"><span>Zamknij aplikację</span></button>
+  </div>
+  <div class="content">
+    <h1>Lista Walk</h1>
+    <div class="controls sticky-controls">
+      <div class="controls-top-row">
+        <div class="left-controls">
+          <button id="backBtn" class="button standard-button" style="display:none;">Powrót</button>
+        </div>
+        <div class="right-controls">
+          <button id="summaryBtn" class="button standard-button">Podsumowanie</button>
+          <button id="createBtn" class="button primary-button">Stwórz instancję</button>
+        </div>
+      </div>
+      <div class="controls-bottom-row">
+        <button id="todayBtn" class="button standard-button">Dzisiaj</button>
+        <label id="startLabel">Start:
+          <input type="datetime-local" id="start">
+        </label>
+        <label id="endLabel">Koniec:
+          <input type="datetime-local" id="end">
+        </label>
+        <button id="prevDayBtn" class="button nav-button">&lt;</button>
+        <button id="nextDayBtn" class="button nav-button">&gt;</button>
+      </div>
+    </div>
+    <div id="details" style="display:none;">
+      <div id="detailSummary" class="summary-widget"></div>
+    </div>
+    <div id="fights"></div>
+  </div>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+const startInput=document.getElementById('start');
+const endInput=document.getElementById('end');
+const todayBtn=document.getElementById('todayBtn');
+const prevDayBtn=document.getElementById('prevDayBtn');
+const nextDayBtn=document.getElementById('nextDayBtn');
+const summaryBtn=document.getElementById('summaryBtn');
+const backBtn=document.getElementById('backBtn');
+const createBtn=document.getElementById('createBtn');
+const sidebarToggle=document.getElementById('sidebarToggle');
+const sidebarShutdown=document.getElementById('sidebarShutdown');
+const fightsDiv=document.getElementById('fights');
+const summaryDiv=document.getElementById('detailSummary');
+const detailsDiv=document.getElementById('details');
+let fights=[];
+const selected=new Set();
+
+function downloadTableAsCSV(table, filename){
+  const rows=Array.from(table.querySelectorAll('tr')).map(tr=>
+    Array.from(tr.querySelectorAll('th,td')).map(td=>{
+      let text=td.innerText.replace(/\n/g,' ').trim();
+      text=text.replace(/"/g,'""');
+      return text.includes(',')||text.includes('"')?`"${text}"`:text;
+    }).join(',')
+  ).join('\n');
+  const blob=new Blob([rows],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function createCsvButton(table, filename){
+  const btn=document.createElement('button');
+  btn.textContent='Pobierz CSV';
+  btn.className='csv-button';
+  btn.addEventListener('click',()=>downloadTableAsCSV(table, filename));
+  return btn;
+}
+
+function updateSelection(row,sel){
+  if(sel){selected.add(row.dataset.id);row.classList.add('selected');}
+  else{selected.delete(row.dataset.id);row.classList.remove('selected');}
+}
+function enableDragSelection(tbody){
+  const rows=Array.from(tbody.querySelectorAll('tr'));
+  let dragging=false;let dragState=true;let startIndex=null;
+  tbody.addEventListener('mousedown',e=>{const tr=e.target.closest('tr');if(!tr)return;e.preventDefault();dragging=true;startIndex=rows.indexOf(tr);dragState=!tr.classList.contains('selected');updateSelection(tr,dragState);});
+  tbody.addEventListener('mouseover',e=>{if(!dragging)return;const tr=e.target.closest('tr');if(!tr)return;const endIndex=rows.indexOf(tr);const [min,max]=startIndex<endIndex?[startIndex,endIndex]:[endIndex,startIndex];rows.forEach((r,i)=>{if(i>=min&&i<=max)updateSelection(r,dragState);});});
+  document.addEventListener('mouseup',()=>{dragging=false;});
+}
+function pad(n){return n.toString().padStart(2,'0');}
+function formatDate(dt){return `${pad(dt.getDate())}.${pad(dt.getMonth()+1)} ${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`;}
+function formatDuration(sec){const h=Math.floor(sec/3600);const m=Math.floor((sec%3600)/60);const s=sec%60;return `${pad(h)}:${pad(m)}:${pad(s)}`;}
+function renderSummaryTo(el,s){
+  const card=(t,v)=>`<div class="card"><h3>${t}</h3><div class="value">${v}</div></div>`;
+  const drops=l=>l.map(d=>`<div class="line-item"><span class="label">${d.name}</span><span class="value">${d.count.toLocaleString()}</span></div>`).join('');
+  const dropVals={};Object.entries(s.dropValuesPerType).forEach(([k,v])=>dropVals[k.toLowerCase()]=v);
+  const dropCard=(t,l,v)=>`<div class="card"><h3>${t}</h3>${drops(l)}<div class="total-value">= ${v.toLocaleString()}</div></div>`;
+  el.innerHTML=`<div class="stats-row">${card('Exp',s.totalExp.toLocaleString())}${card('Psycho',s.totalPsycho.toLocaleString())}${card('Złoto',s.totalGold.toLocaleString())}${card('Zarobek',s.totalGoldWithDrops.toLocaleString())}${card('Walki',s.fightsCount.toLocaleString())}${card('Czas',formatDuration(Math.floor((new Date(s.sessionEnd)-new Date(s.sessionStart))/1000)))}</div><div class="drops-grid">${dropCard('Rary',s.rare,dropVals['rare']||0)}${dropCard('Użytkowe',s.items,dropVals['item']||0)}${dropCard('Białe',s.trash,dropVals['trash']||0)}${dropCard('Syngi',s.synergetics,dropVals['synergetic']||0)}${dropCard('Drify',s.drifs,dropVals['drif']||0)}${dropCard('Orby',[],0)}</div>`;
+}
+function toInputValue(dt){const off=dt.getTimezoneOffset();return new Date(dt.getTime()-off*60000).toISOString().slice(0,16);}
+function setDefaultRange(){const now=new Date();const s=new Date(now.getFullYear(),now.getMonth(),now.getDate(),0,0,0);const e=new Date(now.getFullYear(),now.getMonth(),now.getDate(),23,59,59);startInput.value=toInputValue(s);endInput.value=toInputValue(e);}
+async function loadFights(){
+  const from=startInput.value;const to=endInput.value;if(!from||!to)return;
+  fights=await fetch(`/api/fights/flat?startDateTime=${encodeURIComponent(from)}&endDateTime=${encodeURIComponent(to)}`).then(r=>r.json());
+  fights.sort((a,b)=>new Date(b.time)-new Date(a.time));
+  selected.clear();
+  const table=document.createElement('table');table.className='custom-dark-table';table.innerHTML=`<thead><tr><th class="nowrap">Data</th><th>Złoto</th><th>Exp</th><th>Psycho</th><th>Instancja</th><th>Przeciwnicy</th><th>Drop</th></tr></thead>`;
+  const tbody=document.createElement('tbody');
+  fights.forEach(f=>{const tr=document.createElement('tr');tr.dataset.id=f.id;tr.dataset.instance=f.instanceId||'';tr.innerHTML=`<td class="nowrap">${formatDate(new Date(f.time))}</td><td>${f.gold}</td><td>${f.exp}</td><td>${f.psycho}</td><td>${f.instanceName||''}</td><td class="truncate" title="${f.opponents}">${f.opponents}</td><td class="truncate" title="${f.drops}">${f.drops}</td>`;tbody.appendChild(tr);});
+  table.appendChild(tbody);
+  fightsDiv.innerHTML='';
+  fightsDiv.appendChild(table);
+  fightsDiv.appendChild(createCsvButton(table,'walki.csv'));
+  enableDragSelection(tbody);
+  tbody.querySelectorAll('tr').forEach(tr=>tr.addEventListener('click',async e=>{
+    if(e.target.tagName==='INPUT')return;
+    const instId=tr.dataset.instance;
+    if(!instId)return;
+    const data=await fetch(`/api/instances/${instId}/fights`).then(r=>r.json());
+    const ids=data.map(f=>f.id);
+    const summary=await fetch('/api/fights/summary',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(ids)}).then(r=>r.json());
+    renderSummaryTo(summaryDiv,summary);
+    detailsDiv.style.display='block';
+    fightsDiv.style.display='none';
+    backBtn.style.display='inline-block';
+    summaryBtn.style.display='none';
+  }));
+}
+function saveRange(){localStorage.setItem('startTime',startInput.value);localStorage.setItem('endTime',endInput.value);}
+startInput.addEventListener('change',()=>{saveRange();loadFights();});
+endInput.addEventListener('change',()=>{saveRange();loadFights();});
+todayBtn.addEventListener('click',()=>{setDefaultRange();saveRange();loadFights();});
+prevDayBtn.addEventListener('click',()=>{const s=new Date(startInput.value);const e=new Date(endInput.value);s.setDate(s.getDate()-1);e.setDate(e.getDate()-1);startInput.value=toInputValue(s);endInput.value=toInputValue(e);saveRange();loadFights();});
+nextDayBtn.addEventListener('click',()=>{const s=new Date(startInput.value);const e=new Date(endInput.value);s.setDate(s.getDate()+1);e.setDate(e.getDate()+1);startInput.value=toInputValue(s);endInput.value=toInputValue(e);saveRange();loadFights();});
+sidebarToggle.addEventListener('click',()=>{document.getElementById('sidebar').classList.toggle('collapsed');});
+sidebarShutdown.addEventListener('click',()=>{
+  if(confirm('Czy na pewno chcesz zamknąć aplikację?')){
+    fetch('/api/shutdown',{method:'POST'}).then(()=>{window.close();});
+  }
+});
+summaryBtn.addEventListener('click',async ()=>{
+  if(selected.size===0){alert('Nic nie zaznaczono');return;}
+  const ids=Array.from(selected);
+  const res=await fetch('/api/fights/summary',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(ids)});const s=await res.json();
+  renderSummaryTo(summaryDiv,s);
+  detailsDiv.style.display='block';
+  fightsDiv.style.display='none';
+  backBtn.style.display='inline-block';
+  summaryBtn.style.display='none';
+});
+backBtn.addEventListener('click',()=>{detailsDiv.style.display='none';fightsDiv.style.display='block';backBtn.style.display='none';summaryBtn.style.display='inline-block';});
+createBtn.addEventListener('click',()=>{
+  if(selected.size===0){alert('Zaznacz walki do utworzenia instancji.');return;}
+  const times=Array.from(selected).map(id=>new Date(fights.find(x=>x.id===id).time));
+  const s=new Date(Math.min(...times)-15000);
+  const e=new Date(Math.max(...times));
+  document.getElementById('instanceStart').value=s.toISOString().slice(0,16);
+  document.getElementById('instanceEnd').value=e.toISOString().slice(0,16);
+  document.getElementById('createInstanceModal').classList.add('show');
+});
+document.getElementById('confirmCreateInstance').addEventListener('click',async ()=>{
+  const name=document.getElementById('instanceName').value;
+  const difficulty=parseInt(document.getElementById('instanceDifficulty').value);
+  const start=document.getElementById('instanceStart').value;
+  const end=document.getElementById('instanceEnd').value;
+  const res=await fetch('/api/instances',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name,difficulty,startTime:start,endTime:end,fightIds:Array.from(selected)})});
+  if(!res.ok){const msg=await res.text();alert(msg);return;}
+  document.getElementById('createInstanceModal').classList.remove('show');
+  loadFights();
+});
+document.getElementById('closeCreateInstanceModal').addEventListener('click',()=>{document.getElementById('createInstanceModal').classList.remove('show');});
+document.getElementById('cancelCreateInstance').addEventListener('click',()=>{document.getElementById('createInstanceModal').classList.remove('show');});
+
+const savedStart=localStorage.getItem('startTime');
+const savedEnd=localStorage.getItem('endTime');
+if(savedStart&&savedEnd){startInput.value=savedStart;endInput.value=savedEnd;}else{setDefaultRange();}
+loadFights();
+});
+</script>
+<div class="modal" id="createInstanceModal" tabindex="-1">
+  <div class="form-card">
+    <button type="button" id="closeCreateInstanceModal" class="btn-close" aria-label="Close" style="align-self:flex-end;"></button>
+    <h2 class="form-title">Utwórz instancję</h2>
+    <div class="form-group">
+      <label class="form-label" for="instanceName">Nazwa</label>
+      <input type="text" id="instanceName" class="form-control" placeholder="Np. Hvar, Torisa...">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="instanceDifficulty">Poziom trudności</label>
+      <select id="instanceDifficulty" class="form-select">
+        <option value="1">Normalny</option>
+        <option value="2">Łatwy</option>
+        <option value="3">Trudny</option>
+      </select>
+    </div>
+    <div class="datetime-row">
+      <div class="form-group">
+        <label class="form-label" for="instanceStart">Start</label>
+        <input type="datetime-local" id="instanceStart" class="form-control">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="instanceEnd">Koniec</label>
+        <input type="datetime-local" id="instanceEnd" class="form-control">
+      </div>
+    </div>
+    <div class="button-row" style="margin-top: 16px;">
+      <button type="button" id="confirmCreateInstance" class="btn btn-primary">Zapisz</button>
+      <button type="button" id="cancelCreateInstance" class="btn btn-secondary">Anuluj</button>
+    </div>
+  </div>
+</div>
+</body>
+</html>

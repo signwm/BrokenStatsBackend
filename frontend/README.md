@@ -1,6 +1,6 @@
 # Frontend
 
-This folder contains a very small web page used to view data from the backend.
+This folder contains a single dashboard used to view data from the backend.
 
 ## Running
 
@@ -21,3 +21,4 @@ Open `http://localhost:5005/instances.html` to browse fights grouped by instance
 Check the boxes next to days, instances or individual fights to build a summary
 just like on the `fights` page. Selections are stored in `localStorage` so they
 persist across refreshes.
+

@@ -2,14 +2,17 @@ using BrokenStatsBackend.src.Database;
 using BrokenStatsBackend.src.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using System;
 
 namespace BrokenStatsBackend.src.Controllers;
 
 [ApiController]
 [Route("api/fights")]
-public class FightsController(AppDbContext db) : ControllerBase
+public class FightsController(AppDbContext db, ILogger<FightsController> logger) : ControllerBase
 {
     private readonly AppDbContext _db = db;
+    private readonly ILogger<FightsController> _logger = logger;
 
     [HttpGet("flat")]
     public async Task<ActionResult<IEnumerable<FightFlatDto>>> GetFlat(
@@ -17,7 +20,10 @@ public class FightsController(AppDbContext db) : ControllerBase
        DateTime? endDateTime = null,
        string? search = null)
     {
+        try
+        {
         var query = _db.Fights
+            .Include(f => f.Instance)
             .Include(f => f.Opponents).ThenInclude(o => o.OpponentType)
             .Include(f => f.Drops).ThenInclude(d => d.DropItem).ThenInclude(di => di.DropType)
             .AsQueryable();
@@ -41,6 +47,7 @@ public class FightsController(AppDbContext db) : ControllerBase
             Exp = fight.Exp,
             Gold = fight.Gold,
             Psycho = fight.Psycho,
+            DropValue = fight.Drops.Sum(GetDropValue),
             Opponents = string.Join(", ",
                 fight.Opponents
                     .GroupBy(o => new { o.OpponentType.Name, o.OpponentType.Level })
@@ -62,7 +69,9 @@ public class FightsController(AppDbContext db) : ControllerBase
                         var amount = d.Quantity > 1 ? $" ({d.Quantity})" : "";
                         return $"{d.DropItem.Name}{quality}{amount}";
                     })
-            )
+            ),
+            InstanceName = fight.Instance != null ? fight.Instance.Name : null,
+            InstanceId = fight.InstanceId
         }).ToList();
 
         if (!string.IsNullOrWhiteSpace(search))
@@ -79,11 +88,19 @@ public class FightsController(AppDbContext db) : ControllerBase
         }
 
         return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get fights");
+            throw;
+        }
     }
 
     [HttpGet("summary")]
     public async Task<IActionResult> GetSummary([FromQuery] DateTime from, [FromQuery] DateTime to)
     {
+        try
+        {
         var fights = await _db.Fights
             .Include(f => f.Drops)
                 .ThenInclude(d => d.DropItem)
@@ -106,7 +123,8 @@ public class FightsController(AppDbContext db) : ControllerBase
                 synergetics = new List<object>(),
                 trash = new List<object>(),
                 rare = new List<object>(),
-                dropValuesPerType = new Dictionary<string, int>()
+                dropValuesPerType = new Dictionary<string, int>(),
+                totalGoldWithDrops = 0
             });
         }
 
@@ -132,10 +150,13 @@ public class FightsController(AppDbContext db) : ControllerBase
                 g => g.Sum(GetDropValue)
             );
 
+        var totalGoldWithDrops = totalGold + dropValuesPerType.Values.Sum();
+
         return Ok(new
         {
             totalExp,
             totalGold,
+            totalGoldWithDrops,
             totalPsycho,
             fightsCount,
             sessionStart,
@@ -147,11 +168,19 @@ public class FightsController(AppDbContext db) : ControllerBase
             rare,
             dropValuesPerType
         });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get summary");
+            throw;
+        }
     }
 
     [HttpPost("summary")]
     public async Task<IActionResult> GetSummaryByIds([FromBody] Guid[] ids)
     {
+        try
+        {
         var fights = await _db.Fights
             .Include(f => f.Drops)
                 .ThenInclude(d => d.DropItem)
@@ -174,7 +203,8 @@ public class FightsController(AppDbContext db) : ControllerBase
                 synergetics = new List<object>(),
                 trash = new List<object>(),
                 rare = new List<object>(),
-                dropValuesPerType = new Dictionary<string, int>()
+                dropValuesPerType = new Dictionary<string, int>(),
+                totalGoldWithDrops = 0
             });
         }
 
@@ -200,10 +230,13 @@ public class FightsController(AppDbContext db) : ControllerBase
                 g => g.Sum(GetDropValue)
             );
 
+        var totalGoldWithDrops = totalGold + dropValuesPerType.Values.Sum();
+
         return Ok(new
         {
             totalExp,
             totalGold,
+            totalGoldWithDrops,
             totalPsycho,
             fightsCount,
             sessionStart,
@@ -215,8 +248,40 @@ public class FightsController(AppDbContext db) : ControllerBase
             rare,
             dropValuesPerType
         });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to get summary by ids");
+            throw;
+        }
     }
 
+    [HttpPut("{id}")]
+    public async Task<IActionResult> UpdateFight(Guid id, [FromBody] UpdateFightDto dto)
+    {
+        var fight = await _db.Fights.FirstOrDefaultAsync(f => f.PublicId == id);
+        if (fight == null) return NotFound();
+        fight.Time = dto.Time;
+        fight.Gold = dto.Gold;
+        fight.Psycho = dto.Psycho;
+        fight.Exp = dto.Exp;
+        fight.InstanceId = dto.InstanceId;
+        await _db.SaveChangesAsync();
+        return Ok();
+    }
+
+    [HttpDelete("{id}")]
+    public async Task<IActionResult> DeleteFight(Guid id)
+    {
+        var fight = await _db.Fights.FirstOrDefaultAsync(f => f.PublicId == id);
+        if (fight == null) return NotFound();
+        _db.Fights.Remove(fight);
+        await _db.SaveChangesAsync();
+        return Ok();
+    }
+
+
+    public static int GetDropValueStatic(DropEntity drop) => GetDropValue(drop);
 
     private static int GetDropValue(DropEntity drop)
     {
@@ -244,25 +309,51 @@ public class FightsController(AppDbContext db) : ControllerBase
         return Config.TrashDefaultPrice;
     }
 
+    private static int GetUnitPrice(DropEntity drop)
+    {
+        string type = drop.DropItem.DropType.Type.ToLower();
+        return type switch
+        {
+            "synergetic" => GetSynergeticPrice(drop.DropItem.Name),
+            "trash" => GetTrashPrice(drop.DropItem.Quality),
+            _ => drop.DropItem.Value.GetValueOrDefault()
+        };
+    }
+
     private static List<object> GroupByName(IEnumerable<DropEntity> drops) =>
         drops
             .GroupBy(d => d.DropItem.Name)
             .OrderByDescending(g => g.Sum(d => d.Quantity))
-            .Select(g => (object)new { name = g.Key, count = g.Sum(d => d.Quantity) })
+            .Select(g => (object)new
+            {
+                name = g.Key,
+                count = g.Sum(d => d.Quantity),
+                price = GetUnitPrice(g.First())
+            })
             .ToList();
 
     private static List<object> GroupByQuality(IEnumerable<DropEntity> drops) =>
         drops
             .GroupBy(d => d.DropItem.Quality ?? "?")
             .OrderByDescending(g => g.Sum(d => d.Quantity))
-            .Select(g => (object)new { name = g.Key, count = g.Sum(d => d.Quantity) })
+            .Select(g => (object)new
+            {
+                name = g.Key,
+                count = g.Sum(d => d.Quantity),
+                price = GetUnitPrice(g.First())
+            })
             .ToList();
 
     private static List<object> GroupBySynergeticSuffix(IEnumerable<DropEntity> drops) =>
         drops
             .GroupBy(d => d.DropItem.Name.Split(' ').Last())
             .OrderByDescending(g => g.Sum(d => d.Quantity))
-            .Select(g => (object)new { name = g.Key, count = g.Sum(d => d.Quantity) })
+            .Select(g => (object)new
+            {
+                name = g.Key,
+                count = g.Sum(d => d.Quantity),
+                price = GetUnitPrice(g.First())
+            })
             .ToList();
 
 

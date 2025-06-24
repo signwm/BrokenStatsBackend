@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+  <meta charset="UTF-8">
+  <title>Broken Stats</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .controls {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .sticky-controls {
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      background-color: #121212;
+      padding: 10px;
+      width: 100%;
+    }
+    .controls-top-row,
+    .controls-bottom-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .controls-top-row {
+      justify-content: center;
+      position: relative;
+    }
+    .left-controls {
+      position: absolute;
+      left: 0;
+      display: flex;
+      align-items: center;
+    }
+    .right-controls {
+      display: flex;
+      gap: 10px;
+    }
+    .controls-bottom-row {
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-start;
+    }
+    .controls-bottom-row label {
+      display: flex;
+      align-items: center;
+      color: #ccc;
+      font-size: 13px;
+      gap: 6px;
+    }
+    .controls-bottom-row input[type="datetime-local"] {
+      background-color: #2a2a2a;
+      color: #eee;
+      border: 1px solid #444;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    #details{width:100%;}
+  </style>
+</head>
+<body class="with-sidebar">
+  <div class="sidebar" id="sidebar">
+    <button class="toggle" id="sidebarToggle">☰</button>
+    <ul>
+      <li><a href="dashboard.html"><span>Lista Instancji</span></a></li>
+      <li><a href="stats.html"><span>Statystyki instancji</span></a></li>
+      <li><a href="fights.html"><span>Lista Walk</span></a></li>
+      <li><a href="without.html"><span>Walki bez instancji</span></a></li>
+      <li><a href="breaks.html"><span>Zapisane przerwy</span></a></li>
+    </ul>
+    <button id="sidebarShutdown"><span>Zamknij aplikację</span></button>
+  </div>
+  <div class="content">
+    <h1>Lista Instancji</h1>
+    <div class="controls sticky-controls">
+      <div class="controls-top-row">
+        <div class="left-controls">
+          <button id="backBtn" class="button standard-button" style="display:none;">Powrót</button>
+        </div>
+        <div class="right-controls">
+          <button id="summaryBtn" class="button standard-button">Podsumowanie</button>
+          <button id="createBtn" class="button primary-button" style="display:none;">Stwórz instancję</button>
+          <button id="breakBtn" class="button standard-button" style="display:none;">Dodaj przerwę</button>
+          <button id="deleteBtn" class="end-button" style="display:none;">Usuń instancję</button>
+        </div>
+      </div>
+      <div class="controls-bottom-row">
+        <button id="todayBtn" class="button standard-button">Dzisiaj</button>
+        <label id="startLabel">Start:
+          <input type="datetime-local" id="start">
+        </label>
+        <label id="endLabel">Koniec:
+          <input type="datetime-local" id="end">
+        </label>
+        <button id="prevDayBtn" class="button nav-button">&lt;</button>
+        <button id="nextDayBtn" class="button nav-button">&gt;</button>
+        <input id="searchBox" type="text" placeholder="Szukaj..." style="margin-left:10px;">
+      </div>
+    </div>
+  <div id="instances"></div>
+  <div id="details" style="display:none;">
+    <div id="detailSummary" class="summary-widget"></div>
+    <div id="fights"></div>
+  </div>
+<script>
+document.addEventListener('DOMContentLoaded',()=>{
+const startInput=document.getElementById('start');
+const endInput=document.getElementById('end');
+const startLabel=document.getElementById('startLabel');
+const endLabel=document.getElementById('endLabel');
+const todayBtn=document.getElementById('todayBtn');
+const prevDayBtn=document.getElementById('prevDayBtn');
+const nextDayBtn=document.getElementById('nextDayBtn');
+const summaryBtn=document.getElementById('summaryBtn');
+const backBtn=document.getElementById('backBtn');
+const createBtn=document.getElementById('createBtn');
+const breakBtn=document.getElementById('breakBtn');
+const deleteBtn=document.getElementById('deleteBtn');
+const sidebarToggle=document.getElementById('sidebarToggle');
+const sidebarShutdown=document.getElementById('sidebarShutdown');
+const instancesDiv=document.getElementById('instances');
+const detailsDiv=document.getElementById('details');
+const summaryDiv=document.getElementById('detailSummary');
+const fightsDiv=document.getElementById('fights');
+const searchBox=document.getElementById('searchBox');
+let instanceStarts={};
+const selectedInstances=new Set();
+const fightCache={};
+let selectedNone=new Set();
+let currentInstanceId=null;
+let openInstanceId=null;
+let summaryMode=false;
+let allInstances=[];
+let currentFights=[];
+let currentStartTime=null;
+
+
+function downloadTableAsCSV(table, filename){
+  const rows=Array.from(table.querySelectorAll('tr')).map(tr=>
+    Array.from(tr.querySelectorAll('th,td')).map(td=>{
+      let text=td.innerText.replace(/\n/g,' ').trim();
+      text=text.replace(/"/g,'""');
+      return text.includes(',')||text.includes('"')?`"${text}"`:text;
+    }).join(',')
+  ).join('\n');
+  const blob=new Blob([rows],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function createCsvButton(table, filename){
+  const btn=document.createElement('button');
+  btn.textContent='Pobierz CSV';
+  btn.className='csv-button';
+  btn.addEventListener('click',()=>downloadTableAsCSV(table, filename));
+  return btn;
+}
+
+function parseSearchQuery(q){
+  const regex=/"([^"]+)"|([^\s"]+)/g;
+  const terms=[];
+  let m;
+  while((m=regex.exec(q))!==null){
+    const t=m[1]||m[2];
+    if(t.toLowerCase()==='or') continue;
+    terms.push(t.toLowerCase());
+  }
+  return terms;
+}
+
+function filterList(list, terms){
+  if(terms.length===0) return list.slice();
+  return list.filter(item=>{
+    const values=Object.values(item).map(v=>String(v).toLowerCase());
+    return terms.some(term=>values.some(val=>val.includes(term)));
+  });
+}
+
+function updateNoneSelection(row, selected){
+  if(selected){
+    selectedNone.add(row.dataset.id);
+    row.classList.add('selected');
+  }else{
+    selectedNone.delete(row.dataset.id);
+    row.classList.remove('selected');
+  }
+}
+
+function updateInstanceSelection(row, selected){
+  const id = row.dataset.id;
+  if(selected){
+    selectedInstances.add(id);
+    row.classList.add('selected');
+  } else {
+    selectedInstances.delete(id);
+    row.classList.remove('selected');
+  }
+}
+
+function enableDragSelection(tbody){
+  const rows=Array.from(tbody.querySelectorAll('tr'));
+  let dragging=false;
+  let dragState=true;
+  let startIndex=null;
+  tbody.addEventListener('mousedown',e=>{
+    const tr=e.target.closest('tr');
+    if(!tr) return;
+    e.preventDefault();
+    dragging=true;
+    startIndex=rows.indexOf(tr);
+    dragState=!tr.classList.contains('selected');
+    updateNoneSelection(tr, dragState);
+  });
+  tbody.addEventListener('mouseover',e=>{
+    if(!dragging) return;
+    const tr=e.target.closest('tr');
+    if(!tr) return;
+    const endIndex=rows.indexOf(tr);
+    const [min,max]=startIndex<endIndex?[startIndex,endIndex]:[endIndex,startIndex];
+    rows.forEach((row,i)=>{
+      if(i>=min&&i<=max) updateNoneSelection(row, dragState);
+    });
+  });
+  document.addEventListener('mouseup',()=>{dragging=false;});
+}
+
+function updateHeaderButtons(){
+  if(summaryMode){
+    createBtn.style.display='none';
+    breakBtn.style.display='none';
+    deleteBtn.style.display='none';
+  } else if(currentInstanceId){
+    createBtn.style.display='none';
+    breakBtn.style.display='inline-block';
+    deleteBtn.style.display='inline-block';
+    deleteBtn.dataset.id=currentInstanceId;
+  } else if(openInstanceId){
+    createBtn.style.display='none';
+    breakBtn.style.display='inline-block';
+    deleteBtn.style.display='none';
+  } else {
+    createBtn.style.display='none';
+    breakBtn.style.display='none';
+    deleteBtn.style.display='none';
+  }
+}
+function pad(n){return n.toString().padStart(2,'0');}
+function formatDate(dt){return `${pad(dt.getDate())}.${pad(dt.getMonth()+1)} ${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`;}
+function formatTime(dt){return `${pad(dt.getHours())}:${pad(dt.getMinutes())}:${pad(dt.getSeconds())}`;}
+function formatDuration(sec){const h=Math.floor(sec/3600);const m=Math.floor((sec%3600)/60);const s=sec%60;return `${pad(h)}:${pad(m)}:${pad(s)}`;}
+function aggregate(list){
+  const start=new Date(list[0].time);const end=new Date(list[list.length-1].time);
+  let gold=0,exp=0,psycho=0,drop=0;
+  list.forEach(f=>{gold+=f.gold;exp+=f.exp;psycho+=f.psycho;drop+=f.dropValue;});
+  return {start:start.toISOString(),duration:Math.floor((end-start)/1000),gold,exp,psycho,profit:gold+drop,count:list.length};
+}
+async function loadFights(id){
+  if(fightCache[id]) return fightCache[id];
+  const res=await fetch(`/api/instances/${id}/fights`);const data=await res.json();fightCache[id]=data;return data;
+}
+async function loadInstances(){
+  const from=startInput.value;const to=endInput.value;
+  if(!from||!to)return;
+  allInstances = await fetch(`/api/instances/range?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`).then(r=>r.json());
+  applySearch();
+}
+
+function renderFights(list){
+  const table=document.createElement('table');
+  table.className='custom-dark-table';
+  table.innerHTML=`<thead><tr><th class="nowrap">Data</th><th>Złoto</th><th>Exp</th><th>Psycho</th><th>Przeciwnicy</th><th>Drop</th></tr></thead>`;
+  const tbody=document.createElement('tbody');
+  list.forEach(f=>{
+    const time=currentInstanceId==='none'?new Date(f.time):new Date(new Date(currentStartTime).getTime()+f.offsetSeconds*1000);
+    const tr=document.createElement('tr');
+    tr.dataset.id=f.id;
+    tr.innerHTML=`<td class="nowrap">${formatDate(time)}</td><td>${f.gold}</td><td>${f.exp}</td><td>${f.psycho}</td><td class="truncate" title="${f.opponents}">${f.opponents}</td><td class="truncate" title="${f.drops}">${f.drops}</td>`;
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  fightsDiv.innerHTML='';
+  fightsDiv.appendChild(table);
+  fightsDiv.appendChild(createCsvButton(table,'walki.csv'));
+  if(currentInstanceId==='none'){
+    selectedNone=new Set();
+    enableDragSelection(tbody);
+  }
+}
+
+function applySearch(){
+  const terms=parseSearchQuery(searchBox.value);
+  if(detailsDiv.style.display==='block'){
+    const filtered=filterList(currentFights,terms);
+    renderFights(filtered);
+  }else{
+    const filtered=filterList(allInstances,terms);
+    renderInstances(filtered);
+  }
+  updateHeaderButtons();
+}
+function renderInstances(list){
+  list.sort((a,b)=>new Date(b.startTime)-new Date(a.startTime));
+  openInstanceId=null;
+  const open=list.find(i=>i.durationSeconds===null);
+  if(open) openInstanceId=open.id;
+  selectedInstances.clear();
+  instancesDiv.innerHTML='';
+  instanceStarts={};
+  const table=document.createElement('table');
+  table.className='custom-dark-table';
+  table.innerHTML=`<thead><tr><th><input type="checkbox" id="selectAll"></th><th class="nowrap">Data startu</th><th>Nazwa</th><th>Trudność</th><th>Złoto</th><th>Exp</th><th>Psycho</th><th>Zarobek</th><th>Walki</th><th>Czas trwania</th></tr></thead>`;
+  const tbody=document.createElement('tbody');
+  list.forEach(inst=>{
+    instanceStarts[inst.id]=inst.startTime;
+    const diff=inst.difficulty===3?'Trudna':inst.difficulty===1?'Normalna':'Łatwa';
+    const tr=document.createElement('tr');
+    const dur=inst.durationSeconds!=null?formatDuration(inst.durationSeconds):`<button data-id="${inst.id}" class="close end-button">zakończ instancję</button>`;
+    tr.innerHTML=`<td><input type="checkbox" data-id="${inst.id}"></td><td class="nowrap">${formatDate(new Date(inst.startTime))}</td><td>${inst.name}</td><td>${diff}</td><td>${inst.gold.toLocaleString()}</td><td>${inst.exp.toLocaleString()}</td><td>${inst.psycho.toLocaleString()}</td><td>${inst.profit.toLocaleString()}</td><td>${inst.fights}</td><td>${dur}</td>`;
+    tr.dataset.id=inst.id;
+    tbody.appendChild(tr);
+  });
+  table.appendChild(tbody);
+  instancesDiv.appendChild(table);
+  instancesDiv.appendChild(createCsvButton(table,'instancje.csv'));
+  const selectAllCb=table.querySelector('#selectAll');
+  tbody.querySelectorAll('button.close').forEach(btn=>btn.addEventListener('click',e=>{e.stopPropagation();closeInstance(btn.dataset.id);}));
+  tbody.querySelectorAll('tr').forEach(tr=>tr.addEventListener('click',e=>{if(e.target.tagName==='BUTTON'||e.target.type==='checkbox')return;showDetails(tr.dataset.id);}));
+  tbody.querySelectorAll('input[type="checkbox"]').forEach(cb=>cb.addEventListener('change',async ()=>{
+    updateInstanceSelection(cb.closest('tr'), cb.checked);
+    selectAllCb.checked=[...tbody.querySelectorAll('input[type="checkbox"]')].every(x=>x.checked);
+  }));
+  selectAllCb.addEventListener('change',async ()=>{
+    const state=selectAllCb.checked;
+    tbody.querySelectorAll('input[type="checkbox"]').forEach(cb=>{
+      cb.checked=state;
+      updateInstanceSelection(cb.closest('tr'), state);
+    });
+  });
+  updateHeaderButtons();
+}
+function closeInstance(id){
+  fetch(`/api/instances/${id}/close`,{method:'POST'}).then(()=>loadInstances());
+}
+function showDetails(id){
+  const start=instanceStarts[id];
+  if(!start)return;
+  const url=id==='none'?`/api/instances/without/fights?from=${encodeURIComponent(startInput.value)}&to=${encodeURIComponent(endInput.value)}`:`/api/instances/${id}/fights`;
+  fetch(url).then(r=>r.json()).then(list=>{
+    list.sort((a,b)=>{
+      if(id==='none') return new Date(b.time)-new Date(a.time);
+      return b.offsetSeconds-a.offsetSeconds;
+    });
+    currentFights=list;
+    currentStartTime=start;
+    const ids=list.map(f=>f.id);
+    fetch('/api/fights/summary',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(ids)})
+      .then(r=>r.json()).then(s=>renderSummaryTo(summaryDiv,s));
+    applySearch();
+    if(id==='none'){
+      selectedNone=new Set();
+    }
+    instancesDiv.style.display='none';
+    detailsDiv.style.display='block';
+      startLabel.style.display='none';
+      endLabel.style.display='none';
+      todayBtn.style.display='none';
+      prevDayBtn.style.display='none';
+      nextDayBtn.style.display='none';
+      summaryBtn.style.display='none';
+      backBtn.style.display='inline-block';
+  currentInstanceId=id;
+  updateHeaderButtons();
+  });
+}
+function renderSummaryTo(el,s){
+  const card=(t,v)=>`<div class="card"><h3>${t}</h3><div class="value">${v}</div></div>`;
+  const drops=list=>list.map(d=>{
+    const count=d.count.toLocaleString();
+    const price=d.price.toLocaleString();
+    return `<div class="line-item"><span class="label">${d.name}</span><span class="value">${count} x ${price}</span></div>`;
+  }).join('');
+  const dropVals={};Object.entries(s.dropValuesPerType).forEach(([k,v])=>dropVals[k.toLowerCase()]=v);
+  const dropCard=(t,l,v)=>`<div class="card"><h3>${t}</h3>${drops(l)}<div class="total-value">= ${v.toLocaleString()}</div></div>`;
+  el.innerHTML=`<div class="stats-row">${card('Exp',s.totalExp.toLocaleString())}${card('Psycho',s.totalPsycho.toLocaleString())}${card('Złoto',s.totalGold.toLocaleString())}${card('Zarobek',s.totalGoldWithDrops.toLocaleString())}${card('Walki',s.fightsCount.toLocaleString())}${card('Czas',formatDuration(Math.floor((new Date(s.sessionEnd)-new Date(s.sessionStart))/1000)))}</div><div class="drops-grid">${dropCard('Rary',s.rare,dropVals['rare']||0)}${dropCard('Użytkowe',s.items,dropVals['item']||0)}${dropCard('Białe',s.trash,dropVals['trash']||0)}${dropCard('Syngi',s.synergetics,dropVals['synergetic']||0)}${dropCard('Drify',s.drifs,dropVals['drif']||0)}${dropCard('Orby',[],0)}</div>`;
+}
+backBtn.addEventListener('click',()=>{
+  detailsDiv.style.display='none';
+  instancesDiv.style.display='block';
+  startLabel.style.display='inline-block';
+  endLabel.style.display='inline-block';
+  todayBtn.style.display='inline-block';
+  prevDayBtn.style.display='inline-block';
+  nextDayBtn.style.display='inline-block';
+  backBtn.style.display='none';
+  summaryBtn.style.display='inline-block';
+  currentInstanceId=null;
+  summaryMode=false;
+  applySearch();
+});
+function toInputValue(dt){
+  const off=dt.getTimezoneOffset();
+  return new Date(dt.getTime()-off*60000).toISOString().slice(0,16);
+}
+
+function setDefaultRange(){
+  const now=new Date();
+  const start=new Date(now.getFullYear(),now.getMonth(),now.getDate(),0,0,0);
+  const end=new Date(now.getFullYear(),now.getMonth(),now.getDate(),23,59,59);
+  startInput.value=toInputValue(start);
+  endInput.value=toInputValue(end);
+}
+
+const savedStart=localStorage.getItem('startTime');
+const savedEnd=localStorage.getItem('endTime');
+if(savedStart&&savedEnd){
+  startInput.value=savedStart;
+  endInput.value=savedEnd;
+}else{
+  setDefaultRange();
+}
+
+function saveRange(){
+  localStorage.setItem('startTime',startInput.value);
+  localStorage.setItem('endTime',endInput.value);
+}
+
+startInput.addEventListener('change',()=>{saveRange();loadInstances();});
+endInput.addEventListener('change',()=>{saveRange();loadInstances();});
+loadInstances();
+updateHeaderButtons();
+todayBtn.addEventListener('click',()=>{
+  setDefaultRange();
+  saveRange();
+  loadInstances();
+});
+
+function openCreateInstanceModal(){
+  if(selectedNone.size===0){
+    alert('Zaznacz walki do utworzenia instancji.');
+    return;
+  }
+  const times=Array.from(selectedNone).map(id=>{const f=fightCache['none'].find(x=>x.id===id);return new Date(f.time);});
+  const start=new Date(Math.min(...times)-15000);
+  const end=new Date(Math.max(...times));
+  document.getElementById('instanceStart').value=start.toISOString().slice(0,16);
+  document.getElementById('instanceEnd').value=end.toISOString().slice(0,16);
+  document.getElementById('createInstanceModal').classList.add('show');
+}
+function openBreakModal(){
+  const now=new Date().toISOString().slice(0,16);
+  document.getElementById('breakStart').value=now;
+  document.getElementById('breakEnd').value=now;
+  document.getElementById('breakModal').classList.add('show');
+}
+document.getElementById('confirmCreateInstance').addEventListener('click',async ()=>{
+  const name=document.getElementById('instanceName').value;
+  const difficulty=parseInt(document.getElementById('instanceDifficulty').value);
+  const start=document.getElementById('instanceStart').value;
+  const end=document.getElementById('instanceEnd').value;
+  const res=await fetch('/api/instances',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name,difficulty,startTime:start,endTime:end,fightIds:Array.from(selectedNone)})
+  });
+  if(!res.ok){
+    const msg=await res.text();
+    alert(msg);
+    return;
+  }
+  document.getElementById('createInstanceModal').classList.remove('show');
+  await loadInstances();
+  showDetails('none');
+});
+document.getElementById('closeCreateInstanceModal').addEventListener('click',()=>{
+  document.getElementById('createInstanceModal').classList.remove('show');
+});
+document.getElementById('cancelCreateInstance').addEventListener('click',()=>{
+  document.getElementById('createInstanceModal').classList.remove('show');
+});
+document.getElementById('confirmBreak').addEventListener('click',async ()=>{
+  const start=document.getElementById('breakStart').value;
+  const end=document.getElementById('breakEnd').value;
+  await fetch('/api/breaks',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({startTime:start,endTime:end})
+  });
+  document.getElementById('breakModal').classList.remove('show');
+  loadInstances();
+});
+document.getElementById('closeBreakModal').addEventListener('click',()=>{
+  document.getElementById('breakModal').classList.remove('show');
+});
+document.getElementById('cancelBreak').addEventListener('click',()=>{
+  document.getElementById('breakModal').classList.remove('show');
+});
+createBtn.addEventListener('click',openCreateInstanceModal);
+breakBtn.addEventListener('click',openBreakModal);
+deleteBtn.addEventListener('click',async ()=>{
+  const id=deleteBtn.dataset.id;
+  if(!id) return;
+  if(!confirm('Usunąć instancję?')) return;
+  await fetch(`/api/instances/${id}`,{method:'DELETE'});
+  backBtn.click();
+  loadInstances();
+});
+sidebarShutdown.addEventListener('click',()=>{
+  if(confirm('Czy na pewno chcesz zamknąć aplikację?')){
+    fetch('/api/shutdown',{method:'POST'}).then(()=>{
+      window.close();
+    });
+  }
+});
+sidebarToggle.addEventListener('click',()=>{
+  document.getElementById('sidebar').classList.toggle('collapsed');
+});
+prevDayBtn.addEventListener('click',()=>{
+  const s=new Date(startInput.value);const e=new Date(endInput.value);s.setDate(s.getDate()-1);e.setDate(e.getDate()-1);startInput.value=toInputValue(s);endInput.value=toInputValue(e);saveRange();loadInstances();
+});
+nextDayBtn.addEventListener('click',()=>{
+  const s=new Date(startInput.value);const e=new Date(endInput.value);s.setDate(s.getDate()+1);e.setDate(e.getDate()+1);startInput.value=toInputValue(s);endInput.value=toInputValue(e);saveRange();loadInstances();
+});
+searchBox.addEventListener('input',applySearch);
+summaryBtn.addEventListener('click',async ()=>{
+  if(selectedInstances.size===0){alert('Nic nie zaznaczono');return;}
+  const ids=[];for(const id of selectedInstances){const fights=await loadFights(id);ids.push(...fights.map(f=>f.id));}
+  const res=await fetch('/api/fights/summary',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(ids)});const s=await res.json();
+  renderSummaryTo(summaryDiv,s);
+  fightsDiv.innerHTML='';
+  instancesDiv.style.display='none';
+  detailsDiv.style.display='block';
+  startLabel.style.display='none';
+  endLabel.style.display='none';
+  todayBtn.style.display='none';
+  prevDayBtn.style.display='none';
+  nextDayBtn.style.display='none';
+  backBtn.style.display='inline-block';
+  summaryBtn.style.display='none';
+  summaryMode=true;
+  currentInstanceId=null;
+  updateHeaderButtons();
+});
+});
+</script>
+<div class="modal" id="createInstanceModal" tabindex="-1">
+  <div class="form-card">
+    <button type="button" id="closeCreateInstanceModal" class="btn-close" aria-label="Close" style="align-self:flex-end;"></button>
+    <h2 class="form-title">Utwórz instancję</h2>
+    <div class="form-group">
+      <label class="form-label" for="instanceName">Nazwa</label>
+      <input type="text" id="instanceName" class="form-control" placeholder="Np. Hvar, Torisa...">
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="instanceDifficulty">Poziom trudności</label>
+      <select id="instanceDifficulty" class="form-select">
+        <option value="1">Normalny</option>
+        <option value="2">Łatwy</option>
+        <option value="3">Trudny</option>
+      </select>
+    </div>
+    <div class="datetime-row">
+      <div class="form-group">
+        <label class="form-label" for="instanceStart">Start</label>
+        <input type="datetime-local" id="instanceStart" class="form-control">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="instanceEnd">Koniec</label>
+        <input type="datetime-local" id="instanceEnd" class="form-control">
+      </div>
+    </div>
+    <div class="button-row" style="margin-top: 16px;">
+      <button type="button" id="confirmCreateInstance" class="btn btn-primary">Zapisz</button>
+      <button type="button" id="cancelCreateInstance" class="btn btn-secondary">Anuluj</button>
+    </div>
+  </div>
+</div>
+<div class="modal" id="breakModal" tabindex="-1">
+  <div class="form-card">
+    <button type="button" id="closeBreakModal" class="btn-close" aria-label="Close" style="align-self:flex-end;"></button>
+    <h2 class="form-title">Dodaj przerwę</h2>
+    <div class="datetime-row">
+      <div class="form-group">
+        <label class="form-label" for="breakStart">Start</label>
+        <input type="datetime-local" id="breakStart" class="form-control">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="breakEnd">Koniec</label>
+        <input type="datetime-local" id="breakEnd" class="form-control">
+      </div>
+    </div>
+    <div class="button-row" style="margin-top: 16px;">
+      <button type="button" id="confirmBreak" class="btn btn-primary">Zapisz</button>
+      <button type="button" id="cancelBreak" class="btn btn-secondary">Anuluj</button>
+    </div>
+  </div>
+</div>
+</div>
+</body>
+</html>

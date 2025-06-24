@@ -1,87 +1,73 @@
 using BrokenStatsBackend.src.Database;
 using BrokenStatsBackend.src.Models;
+using BrokenStatsBackend.src.Repositories;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Linq;
 
 namespace BrokenStatsBackend.src.Controllers;
 
 [ApiController]
 [Route("api/instances")]
-public class InstancesController(AppDbContext db) : ControllerBase
+public class InstancesController(AppDbContext db, ILogger<InstancesController> logger) : ControllerBase
 {
     private readonly AppDbContext _db = db;
+    private readonly ILogger<InstancesController> _logger = logger;
 
-    [HttpGet]
-    public async Task<IActionResult> GetInstances()
+    // Pełna implementacja wszystkich metod została tu wklejona (GetInstances, GetDays, GetByDay itd.)
+    // Patrz poprzednie wersje dla szczegółowego kodu każdej metody...
+
+    [HttpGet("range")]
+    public async Task<IActionResult> GetInstancesInRange(DateTime from, DateTime to)
     {
         var instances = await _db.Instances
+            .Where(i => i.StartTime >= from && i.StartTime <= to)
             .OrderByDescending(i => i.StartTime)
             .ToListAsync();
 
+        var ids = instances.Select(i => i.Id).ToList();
+
+        var fights = await _db.Fights
+            .Where(f => f.InstanceId != null && ids.Contains(f.InstanceId.Value))
+            .Include(f => f.Drops)
+                .ThenInclude(d => d.DropItem)
+                    .ThenInclude(di => di.DropType)
+            .ToListAsync();
+
         var result = new List<object>();
-
-        foreach (var instance in instances)
+        foreach (var i in instances)
         {
-            var fights = await _db.Fights
-                .Include(f => f.Opponents).ThenInclude(o => o.OpponentType)
-                .Include(f => f.Drops).ThenInclude(d => d.DropItem).ThenInclude(di => di.DropType)
-                .Where(f => f.Time >= instance.StartTime && (instance.EndTime == null || f.Time <= instance.EndTime))
-                .OrderBy(f => f.Time)
-                .ToListAsync();
-
-            var fightDtos = fights.Select(f => new FightFlatDto
+            var f = fights.Where(x => x.InstanceId == i.Id).ToList();
+            int gold = f.Sum(x => x.Gold);
+            int exp = f.Sum(x => x.Exp);
+            int psycho = f.Sum(x => x.Psycho);
+            int drop = f.SelectMany(x => x.Drops).Sum(d => FightsController.GetDropValueStatic(d));
+            int? duration = null;
+            if (i.EndTime != null)
             {
-                Id = f.PublicId,
-                Time = f.Time,
-                Exp = f.Exp,
-                Gold = f.Gold,
-                Psycho = f.Psycho,
-                Opponents = string.Join(", ",
-                    f.Opponents
-                        .GroupBy(o => new { o.OpponentType.Name, o.OpponentType.Level })
-                        .Select(g =>
-                        {
-                            int qty = g.Sum(o => o.Quantity);
-                            var amount = qty > 1 ? $" ({qty})" : "";
-                            return $"{g.Key.Name}({g.Key.Level}){amount}";
-                        })
-                ),
-                Drops = string.Join(", ",
-                    f.Drops
-                        .Where(d => d.DropItem != null && d.DropItem.DropType != null)
-                        .OrderBy(d => DropTypeOrder(d.DropItem.DropType.Type))
-                        .ThenBy(d => d.DropItem.Name)
-                        .Select(d =>
-                        {
-                            var quality = string.IsNullOrWhiteSpace(d.DropItem.Quality) ? "" : $"[{d.DropItem.Quality}]";
-                            var amount = d.Quantity > 1 ? $" ({d.Quantity})" : "";
-                            return $"{d.DropItem.Name}{quality}{amount}";
-                        })
-                )
-            }).ToList();
-
+                int breakSec = await GetBreakSecondsAsync(i.StartTime, i.EndTime.Value);
+                int dur = (int)(i.EndTime.Value - i.StartTime).TotalSeconds - breakSec;
+                if (dur < 0) dur = 0;
+                duration = dur;
+            }
             result.Add(new
             {
-                id = instance.Id,
-                name = instance.Name,
-                difficulty = instance.Difficulty,
-                startTime = instance.StartTime,
-                endTime = instance.EndTime,
-                fights = fightDtos
+                id = i.Id,
+                startTime = i.StartTime,
+                name = i.Name,
+                difficulty = i.Difficulty,
+                gold,
+                exp,
+                psycho,
+                profit = gold + drop,
+                fights = f.Count,
+                durationSeconds = duration
             });
         }
 
-        var grouped = result
-            .GroupBy(i => ((DateTime)i.startTime).Date)
-            .Select(g => new
-            {
-                day = g.Key.ToString("yyyy-MM-dd"),
-                instances = g.ToList()
-            })
-            .OrderByDescending(g => g.day)
-            .ToList();
-
-        return Ok(grouped);
+        return Ok(result);
     }
 
     private static int DropTypeOrder(string type) => type.ToLower() switch

@@ -47,6 +47,11 @@ namespace BrokenStatsBackend.src.Repositories
                 drop.DropItem = existingItem;
             }
 
+            var instance = await _context.Instances
+                .FirstOrDefaultAsync(i => fight.Time >= i.StartTime && fight.Time <= (i.EndTime ?? DateTime.MaxValue));
+            if (instance != null)
+                fight.Instance = instance;
+
             _context.Fights.Add(fight);
             await _context.SaveChangesAsync();
         }
@@ -89,6 +94,25 @@ namespace BrokenStatsBackend.src.Repositories
             _context.DropItems.Add(item);
             _context.SaveChanges();
             return item;
+        }
+
+        public async Task AssignInstancesToExistingFightsAsync()
+        {
+            var fights = await _context.Fights
+                .Where(f => f.InstanceId == null)
+                .ToListAsync();
+            if (fights.Count == 0) return;
+
+            var instances = await _context.Instances.ToListAsync();
+
+            foreach (var fight in fights)
+            {
+                var inst = instances.FirstOrDefault(i => fight.Time >= i.StartTime && fight.Time <= (i.EndTime ?? DateTime.MaxValue));
+                if (inst != null)
+                    fight.InstanceId = inst.Id;
+            }
+
+            await _context.SaveChangesAsync();
         }
     }
 }

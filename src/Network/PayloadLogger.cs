@@ -16,9 +16,6 @@ namespace BrokenStatsBackend.src.Network
 
                 utf8Text = utf8Text.Replace("\0", "_");
 
-                // Zapis debugowy — żebyś widział, czy w ogóle się odpala
-                LogDebug("Received: " + utf8Text);
-
                 // Znajdź prefix (do drugiego ';')
                 int firstSemicolon = utf8Text.IndexOf(';');
                 if (firstSemicolon == -1)
@@ -46,7 +43,6 @@ namespace BrokenStatsBackend.src.Network
                 // Dopisz do pliku
                 File.AppendAllText(path, utf8Text + Environment.NewLine, Encoding.UTF8);
 
-                LogDebug("Saved to: " + path);
             }
             catch (Exception ex)
             {
